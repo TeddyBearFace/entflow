@@ -555,7 +555,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
             onTextChange: handleTextChange,
           },
         };
-        setNodes(nds => nds.map(n => ({ ...n, selected: false })).concat(newNode));
+        setNodes(nds => nds.map(n => ({ ...n, selected: false })).concat({ ...newNode, selected: false }));
         setSelectedCustomNode(node.id);
         setCanvasTool("select");
       }
