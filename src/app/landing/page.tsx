@@ -168,31 +168,62 @@ export default function LandingPage() {
             <p style={{ fontSize: 17, color: "#5B6471" }}>Start free. Upgrade when you need more.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 24, maxWidth: 900, margin: "0 auto" }}>
-            {[
-              { name: "Free", price: "$0", desc: "For exploring and small portals", features: ["Up to 30 workflows", "Visual dependency map", "Property impact analysis", "Conflict detection", "Canvas tools"], popular: false },
-              { name: "Pro", price: "$79", desc: "For growing RevOps teams", features: ["Unlimited workflows", "PDF/PNG/SVG export", "Workflow changelog", "Auto-sync (6hr)", "Priority support"], popular: true },
-              { name: "Agency", price: "$149", desc: "For agencies managing clients", features: ["Multi-portal support", "Everything in Pro", "Client-ready exports", "White-label option", "Dedicated support"], popular: false },
-            ].map(p => (
-              <div key={p.name} style={{ background: "white", border: p.popular ? "2px solid #2563EB" : "1px solid #E2E8F0", borderRadius: 16, padding: 32, position: "relative" }}>
-                {p.popular && (
-                  <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: "#2563EB", color: "white", fontSize: 11, fontWeight: 700, padding: "4px 14px", borderRadius: 100, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Most Popular</div>
-                )}
-                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{p.name}</h3>
-                <div style={{ fontSize: 36, fontWeight: 700, margin: "16px 0 4px" }}>{p.price}<span style={{ fontSize: 15, fontWeight: 500, color: "#5B6471" }}>/mo</span></div>
-                <p style={{ fontSize: 13, color: "#5B6471", marginBottom: 24 }}>{p.desc}</p>
-                <ul style={{ listStyle: "none", marginBottom: 24, padding: 0 }}>
-                  {p.features.map(f => (
-                    <li key={f} style={{ fontSize: 14, padding: "6px 0", display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ color: "#059669", fontWeight: 700, fontSize: 13 }}>✓</span> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/connect"
-                  style={{ display: "block", width: "100%", textAlign: "center", padding: "12px 24px", borderRadius: 10, fontWeight: 600, fontSize: 15, textDecoration: "none", ...(p.popular ? { background: "#FF7A59", color: "white" } : { background: "white", color: "#0F1419", border: "1.5px solid #E2E8F0" }) }}>
-                  {p.popular ? "Start Pro Trial" : p.name === "Free" ? "Get Started Free" : "Start Agency Trial"}
-                </Link>
-              </div>
-            ))}
+            {/* Free */}
+            <div style={{ background: "white", border: "1px solid #E2E8F0", borderRadius: 16, padding: 32 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Free</h3>
+              <div style={{ fontSize: 36, fontWeight: 700, margin: "16px 0 4px" }}>$0<span style={{ fontSize: 15, fontWeight: 500, color: "#5B6471" }}>/mo</span></div>
+              <p style={{ fontSize: 13, color: "#5B6471", marginBottom: 24 }}>Get a snapshot of your workflows</p>
+              <ul style={{ listStyle: "none", marginBottom: 24, padding: 0 }}>
+                {["Up to 10 workflows", "Visual dependency map", "Conflict detection", "Health scores", "Changelog", "Syncs every few hours"].map(f => (
+                  <li key={f} style={{ fontSize: 14, padding: "6px 0", display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ color: "#059669", fontWeight: 700, fontSize: 13 }}>✓</span> {f}
+                  </li>
+                ))}
+                {["Export", "Canvas tools", "Tagging", "Property impact", "Manual sync"].map(f => (
+                  <li key={f} style={{ fontSize: 14, padding: "6px 0", display: "flex", alignItems: "center", gap: 8, color: "#94A3B8" }}>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>✗</span> {f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/connect" style={{ display: "block", width: "100%", textAlign: "center", padding: "12px 24px", borderRadius: 10, fontWeight: 600, fontSize: 15, textDecoration: "none", background: "white", color: "#0F1419", border: "1.5px solid #E2E8F0" }}>
+                Get Started Free
+              </Link>
+            </div>
+
+            {/* Pro */}
+            <div style={{ background: "white", border: "2px solid #2563EB", borderRadius: 16, padding: 32, position: "relative" }}>
+              <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: "#2563EB", color: "white", fontSize: 11, fontWeight: 700, padding: "4px 14px", borderRadius: 100, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Most Popular</div>
+              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Pro</h3>
+              <div style={{ fontSize: 36, fontWeight: 700, margin: "16px 0 4px" }}>$29<span style={{ fontSize: 15, fontWeight: 500, color: "#5B6471" }}>/mo</span></div>
+              <p style={{ fontSize: 13, color: "#5B6471", marginBottom: 24 }}>For RevOps teams and consultants</p>
+              <ul style={{ listStyle: "none", marginBottom: 24, padding: 0 }}>
+                {["Up to 500 workflows", "Everything in Free", "PDF/PNG/SVG export", "Canvas tools & shapes", "Workflow tagging", "Property impact analysis", "Manual & auto-sync", "Priority support"].map(f => (
+                  <li key={f} style={{ fontSize: 14, padding: "6px 0", display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ color: "#059669", fontWeight: 700, fontSize: 13 }}>✓</span> {f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/connect" style={{ display: "block", width: "100%", textAlign: "center", padding: "12px 24px", borderRadius: 10, fontWeight: 600, fontSize: 15, textDecoration: "none", background: "#FF7A59", color: "white" }}>
+                Start Pro Trial
+              </Link>
+            </div>
+
+            {/* Enterprise */}
+            <div style={{ background: "white", border: "1px solid #E2E8F0", borderRadius: 16, padding: 32 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Enterprise</h3>
+              <div style={{ fontSize: 36, fontWeight: 700, margin: "16px 0 4px" }}>Custom</div>
+              <p style={{ fontSize: 13, color: "#5B6471", marginBottom: 24 }}>For agencies and large teams</p>
+              <ul style={{ listStyle: "none", marginBottom: 24, padding: 0 }}>
+                {["Unlimited workflows", "Everything in Pro", "Multi-portal support", "Client-ready exports", "White-label option", "Dedicated support", "Custom onboarding"].map(f => (
+                  <li key={f} style={{ fontSize: 14, padding: "6px 0", display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ color: "#059669", fontWeight: 700, fontSize: 13 }}>✓</span> {f}
+                  </li>
+                ))}
+              </ul>
+              <a href="https://meetings-eu1.hubspot.com/kbredekamp1" target="_blank" rel="noopener noreferrer" style={{ display: "block", width: "100%", textAlign: "center", padding: "12px 24px", borderRadius: 10, fontWeight: 600, fontSize: 15, textDecoration: "none", background: "white", color: "#0F1419", border: "1.5px solid #E2E8F0" }}>
+                Book a Call
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -207,7 +238,7 @@ export default function LandingPage() {
               style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "14px 32px", borderRadius: 10, fontWeight: 600, fontSize: 17, background: "#FF7A59", color: "white", textDecoration: "none", boxShadow: "0 4px 20px rgba(255,122,89,0.4)" }}>
               Connect HubSpot — It's Free →
             </Link>
-            <p style={{ marginTop: 16, fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Free up to 30 workflows. No credit card required.</p>
+            <p style={{ marginTop: 16, fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Free up to 10 workflows. No credit card required.</p>
           </div>
         </div>
       </section>

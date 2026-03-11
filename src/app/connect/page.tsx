@@ -180,7 +180,7 @@ export default async function ConnectPage({ searchParams }: ConnectPageProps) {
 
             {/* Trust */}
             <p className="text-center text-xs text-gray-400 mt-4">
-              Free for up to 30 workflows. No credit card required.
+              Free for up to 10 workflows. No credit card required.
             </p>
           </div>
         </div>
