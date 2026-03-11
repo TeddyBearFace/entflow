@@ -1,0 +1,465 @@
+// ===========================================
+// Workflow Mapper - Database Schema
+// ===========================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Portal: A connected HubSpot account ---
+model Portal {
+  id              String     @id @default(cuid())
+  hubspotPortalId String     @unique @map("hubspot_portal_id")
+  name            String?
+  
+  // OAuth tokens (stored encrypted - see lib/encryption.ts)
+  accessToken     String     @map("access_token")
+  refreshToken    String     @map("refresh_token")
+  tokenExpiresAt  DateTime   @map("token_expires_at")
+  
+  // Sync state
+  lastSyncedAt    DateTime?  @map("last_synced_at")
+  syncStatus      SyncStatus @default(NEVER_SYNCED) @map("sync_status")
+  syncProgress    Int        @default(0) @map("sync_progress")   // workflows processed
+  syncTotal       Int        @default(0) @map("sync_total")      // total workflows found
+  syncMessage     String?    @map("sync_message")                // current step description
+  
+  // Subscription
+  planTier        PlanTier   @default(FREE) @map("plan_tier")
+  stripeCustomerId String?   @map("stripe_customer_id")
+  
+  // Auto-sync
+  autoSyncEnabled Boolean    @default(false) @map("auto_sync_enabled")
+  autoSyncInterval Int       @default(360) @map("auto_sync_interval") // minutes
+  
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  
+  // Relations
+  workflows       Workflow[]
+  dependencies    Dependency[]
+  conflicts       Conflict[]
+  syncLogs        SyncLog[]
+  propertyIndex   PropertyIndex[]
+  customNodes     CustomNode[]
+  tags            Tag[]
+
+  @@map("portals")
+}
+
+// --- Workflow: A single HubSpot automation workflow ---
+model Workflow {
+  id                String         @id @default(cuid())
+  portalId          String         @map("portal_id")
+  hubspotFlowId     String         @map("hubspot_flow_id")
+  
+  name              String
+  description       String?
+  objectType        ObjectType     @map("object_type")
+  status            WorkflowStatus @default(ACTIVE)
+  flowType          String?        @map("flow_type") // CONTACT_FLOW, PLATFORM_FLOW, etc.
+  
+  // Raw data from HubSpot API (preserved for re-parsing)
+  enrollmentCriteria Json?         @map("enrollment_criteria")
+  actions           Json?          // Full action tree from HubSpot
+  dataSources       Json?          @map("data_sources") // Fetched object definitions
+  
+  // Parsed metadata
+  actionCount       Int            @default(0) @map("action_count")
+  enrollmentCount   Int?           @map("enrollment_count")
+  
+  // Timestamps from HubSpot
+  hubspotCreatedAt  DateTime?      @map("hubspot_created_at")
+  hubspotUpdatedAt  DateTime?      @map("hubspot_updated_at")
+  
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  
+  // Relations
+  portal            Portal         @relation(fields: [portalId], references: [id], onDelete: Cascade)
+  
+  sourceDependencies Dependency[]  @relation("SourceWorkflow")
+  targetDependencies Dependency[]  @relation("TargetWorkflow")
+  
+  conflictWorkflows  ConflictWorkflow[]
+  workflowTags       WorkflowTag[]
+
+  @@unique([portalId, hubspotFlowId])
+  @@index([portalId])
+  @@index([objectType])
+  @@index([status])
+  @@map("workflows")
+}
+
+// --- Tag: User-defined label for grouping workflows ---
+model Tag {
+  id          String        @id @default(cuid())
+  portalId    String        @map("portal_id")
+  name        String
+  color       String        @default("#6366f1") // hex color
+  
+  createdAt   DateTime      @default(now()) @map("created_at")
+  
+  portal      Portal        @relation(fields: [portalId], references: [id], onDelete: Cascade)
+  workflowTags WorkflowTag[]
+
+  @@unique([portalId, name])
+  @@index([portalId])
+  @@map("tags")
+}
+
+// --- WorkflowTag: Many-to-many junction ---
+model WorkflowTag {
+  id          String   @id @default(cuid())
+  workflowId  String   @map("workflow_id")
+  tagId       String   @map("tag_id")
+  
+  workflow    Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  tag         Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, tagId])
+  @@map("workflow_tags")
+}
+
+// --- Dependency: A relationship between two workflows ---
+model Dependency {
+  id                String         @id @default(cuid())
+  portalId          String         @map("portal_id")
+  
+  sourceWorkflowId  String         @map("source_workflow_id")
+  targetWorkflowId  String?        @map("target_workflow_id") // Null for property-only deps
+  
+  type              DependencyType
+  severity          Severity       @default(INFO)
+  
+  // Details about the dependency
+  detail            Json           // { propertyName, listId, emailId, etc. }
+  description       String?        // Human-readable description
+  
+  createdAt         DateTime       @default(now()) @map("created_at")
+  
+  // Relations
+  portal            Portal         @relation(fields: [portalId], references: [id], onDelete: Cascade)
+  sourceWorkflow    Workflow        @relation("SourceWorkflow", fields: [sourceWorkflowId], references: [id], onDelete: Cascade)
+  targetWorkflow    Workflow?       @relation("TargetWorkflow", fields: [targetWorkflowId], references: [id], onDelete: Cascade)
+
+  @@index([portalId])
+  @@index([sourceWorkflowId])
+  @@index([targetWorkflowId])
+  @@index([type])
+  @@map("dependencies")
+}
+
+// --- Conflict: A detected issue between workflows ---
+model Conflict {
+  id              String         @id @default(cuid())
+  portalId        String         @map("portal_id")
+  
+  type            ConflictType
+  severity        Severity       @default(WARNING)
+  description     String
+  
+  // Details about the conflict
+  detail          Json           // { propertyName, workflowIds, etc. }
+  
+  resolvedAt      DateTime?      @map("resolved_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  
+  // Relations
+  portal          Portal         @relation(fields: [portalId], references: [id], onDelete: Cascade)
+  workflows       ConflictWorkflow[]
+
+  @@index([portalId])
+  @@index([type])
+  @@index([severity])
+  @@map("conflicts")
+}
+
+// --- Join table: Conflicts <-> Workflows (many-to-many) ---
+model ConflictWorkflow {
+  conflictId  String   @map("conflict_id")
+  workflowId  String   @map("workflow_id")
+  
+  conflict    Conflict @relation(fields: [conflictId], references: [id], onDelete: Cascade)
+  workflow    Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@id([conflictId, workflowId])
+  @@map("conflict_workflows")
+}
+
+// --- PropertyIndex: Which workflows read/write each property ---
+model PropertyIndex {
+  id              String   @id @default(cuid())
+  portalId        String   @map("portal_id")
+  
+  propertyName    String   @map("property_name")
+  objectType      String   @map("object_type")
+  
+  // Arrays of workflow IDs that interact with this property
+  readByWorkflows  String[] @map("read_by_workflows")  // Workflow IDs
+  writtenByWorkflows String[] @map("written_by_workflows") // Workflow IDs
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  portal          Portal   @relation(fields: [portalId], references: [id], onDelete: Cascade)
+
+  @@unique([portalId, propertyName, objectType])
+  @@index([portalId])
+  @@map("property_index")
+}
+
+// --- SyncLog: History of data syncs ---
+model SyncLog {
+  id              String     @id @default(cuid())
+  portalId        String     @map("portal_id")
+  
+  status          SyncStatus
+  workflowCount   Int?       @map("workflow_count")
+  dependencyCount Int?       @map("dependency_count")
+  conflictCount   Int?       @map("conflict_count")
+  
+  durationMs      Int?       @map("duration_ms")
+  error           String?
+  
+  startedAt       DateTime   @default(now()) @map("started_at")
+  completedAt     DateTime?  @map("completed_at")
+  
+  portal          Portal     @relation(fields: [portalId], references: [id], onDelete: Cascade)
+
+  @@index([portalId])
+  @@index([startedAt])
+  @@map("sync_logs")
+}
+
+// --- MarketingEmail: Cached email metadata from HubSpot ---
+model MarketingEmail {
+  id              String    @id @default(cuid())
+  portalId        String    @map("portal_id")
+  hubspotEmailId  String    @map("hubspot_email_id")
+  name            String
+  subject         String?
+  fromName        String?   @map("from_name")
+  fromEmail       String?   @map("from_email")
+  replyTo         String?   @map("reply_to")
+  previewText     String?   @map("preview_text")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@unique([portalId, hubspotEmailId])
+  @@index([portalId])
+  @@map("marketing_emails")
+}
+
+// --- CrmList: Cached list metadata from HubSpot ---
+model CrmList {
+  id              String    @id @default(cuid())
+  portalId        String    @map("portal_id")
+  hubspotListId   String    @map("hubspot_list_id")
+  name            String
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@unique([portalId, hubspotListId])
+  @@index([portalId])
+  @@map("crm_lists")
+}
+
+// --- Pipeline: HubSpot pipelines and their stages ---
+model Pipeline {
+  id              String          @id @default(cuid())
+  portalId        String          @map("portal_id")
+  hubspotPipelineId String        @map("hubspot_pipeline_id")
+  objectType      String          @map("object_type") // DEAL, TICKET
+  label           String
+  displayOrder    Int             @default(0) @map("display_order")
+  
+  stages          PipelineStage[]
+  
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  @@unique([portalId, hubspotPipelineId])
+  @@index([portalId])
+  @@map("pipelines")
+}
+
+model PipelineStage {
+  id              String    @id @default(cuid())
+  pipelineId      String    @map("pipeline_id")
+  hubspotStageId  String    @map("hubspot_stage_id")
+  label           String
+  displayOrder    Int       @default(0) @map("display_order")
+  metadata        Json?
+  
+  pipeline        Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@unique([pipelineId, hubspotStageId])
+  @@map("pipeline_stages")
+}
+
+// --- CustomNode: User-created canvas elements (sections, shapes, stickies, text, stages) ---
+model CustomNode {
+  id              String    @id @default(cuid())
+  portalId        String    @map("portal_id")
+  
+  label           String
+  nodeType        String    @default("stage") @map("node_type")
+  // Types: section, shape_rect, shape_diamond, shape_circle, sticky, text, stage, milestone, note, divider
+  color           String    @default("#6366f1")
+  icon            String?
+  description     String?
+  textContent     String?   @map("text_content") @db.Text
+  fontSize        Int?      @map("font_size")
+  fontWeight      String?   @map("font_weight")
+  fontStyle       String?   @map("font_style")
+  textAlign       String?   @map("text_align")
+  zIndex          Int       @default(0) @map("z_index")
+  
+  positionX       Float     @default(0) @map("position_x")
+  positionY       Float     @default(0) @map("position_y")
+  width           Float?
+  height          Float?
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  portal          Portal    @relation(fields: [portalId], references: [id], onDelete: Cascade)
+
+  @@index([portalId])
+  @@map("custom_nodes")
+}
+
+// --- CustomEdge: User-drawn connectors between any nodes ---
+model CustomEdge {
+  id              String    @id @default(cuid())
+  portalId        String    @map("portal_id")
+  sourceNodeId    String    @map("source_node_id")
+  targetNodeId    String    @map("target_node_id")
+  label           String?
+  color           String    @default("#6366f1")
+  edgeType        String    @default("default") @map("edge_type") // default, dashed, dotted
+  animated        Boolean   @default(false)
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([portalId])
+  @@map("custom_edges")
+}
+
+// --- NodePosition: Persisted positions for workflow nodes ---
+model NodePosition {
+  id              String    @id @default(cuid())
+  portalId        String    @map("portal_id")
+  nodeId          String    @map("node_id") // workflow id or custom node id
+  positionX       Float     @map("position_x")
+  positionY       Float     @map("position_y")
+  
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@unique([portalId, nodeId])
+  @@map("node_positions")
+}
+
+// --- Enums ---
+
+enum SyncStatus {
+  NEVER_SYNCED
+  SYNCING
+  COMPLETED
+  FAILED
+}
+
+enum PlanTier {
+  FREE
+  PRO
+  AGENCY
+}
+
+enum ObjectType {
+  CONTACT
+  DEAL
+  COMPANY
+  TICKET
+  CUSTOM
+  UNKNOWN
+}
+
+enum WorkflowStatus {
+  ACTIVE
+  INACTIVE
+  ERRORING
+}
+
+enum DependencyType {
+  PROPERTY_READ
+  PROPERTY_WRITE
+  CROSS_ENROLLMENT
+  LIST_REFERENCE
+  EMAIL_SEND
+  WEBHOOK
+  DELAY_CHAIN
+}
+
+enum Severity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum ConflictType {
+  PROPERTY_WRITE_COLLISION   // Two workflows write to the same property
+  CIRCULAR_DEPENDENCY        // A -> B -> A
+  INACTIVE_REFERENCE         // Active workflow references inactive one
+  EMAIL_OVERLAP              // Same audience, similar timing
+  ORPHANED_ENROLLMENT        // Enrolls into a deleted/missing workflow
+}
+
+// --- WorkflowSnapshot: Stores workflow state for changelog diffing ---
+model WorkflowSnapshot {
+  id                String    @id @default(cuid())
+  portalId          String    @map("portal_id")
+  workflowId        String    @map("workflow_id")
+  hubspotFlowId     String    @map("hubspot_flow_id")
+  name              String
+  status            String
+  actionCount       Int       @map("action_count")
+  actionsHash       String    @map("actions_hash")
+  enrollmentHash    String    @map("enrollment_hash")
+  actionsJson       String    @map("actions_json") @db.Text
+  enrollmentJson    String?   @map("enrollment_json") @db.Text
+  syncLogId         String?   @map("sync_log_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  @@index([portalId, workflowId])
+  @@index([portalId, createdAt])
+  @@map("workflow_snapshots")
+}
+
+// --- ChangelogEntry: Human-readable change records ---
+model ChangelogEntry {
+  id                String    @id @default(cuid())
+  portalId          String    @map("portal_id")
+  workflowId        String?   @map("workflow_id")
+  hubspotFlowId     String?   @map("hubspot_flow_id")
+  workflowName      String    @map("workflow_name")
+  changeType        String    @map("change_type")
+  severity          String    @default("INFO")
+  summary           String
+  details           String?   @db.Text
+  previousValue     String?   @map("previous_value") @db.Text
+  newValue          String?   @map("new_value") @db.Text
+  syncLogId         String?   @map("sync_log_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  @@index([portalId, createdAt])
+  @@index([portalId, workflowId])
+  @@index([portalId, changeType])
+  @@map("changelog_entries")
+}
