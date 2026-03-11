@@ -357,7 +357,7 @@ async function hubspotFetch(
 export async function fetchMarketingEmail(
   portalId: string,
   emailId: string
-): Promise<{ id: string; name: string; subject: string } | null> {
+): Promise<{ id: string; name: string; subject: string; fromName: string; fromEmail: string; replyTo: string; previewText: string } | null> {
   const accessToken = await getValidAccessToken(portalId);
 
   // Try v3 marketing emails API
