@@ -122,7 +122,7 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
     for (const flow of flowDetails) {
       if (flow.actions && Array.isArray(flow.actions)) {
         for (const action of flow.actions) {
-          const contentId = action?.fields?.content_id;
+          const contentId = (action as any)?.fields?.content_id;
           if (contentId && contentId !== "0") {
             emailIds.add(String(contentId));
           }
@@ -147,7 +147,7 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
     for (const flow of flowDetails) {
       if (flow.actions && Array.isArray(flow.actions)) {
         for (const action of flow.actions) {
-          const lid = action?.fields?.listId || action?.fields?.list_id || action?.fields?.staticListId;
+          const lid = (action as any)?.fields?.listId || (action as any)?.fields?.list_id || (action as any)?.fields?.staticListId;
           if (lid) listIds.add(String(lid));
         }
       }
