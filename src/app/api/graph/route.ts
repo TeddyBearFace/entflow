@@ -97,6 +97,9 @@ export async function GET(request: NextRequest) {
       properties: params.get("properties")
         ? params.get("properties")!.split(",")
         : [],
+      tags: params.get("tags")
+        ? params.get("tags")!.split(",")
+        : [],
     };
 
     // Build journey graph
