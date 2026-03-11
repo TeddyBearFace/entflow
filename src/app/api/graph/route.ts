@@ -97,9 +97,6 @@ export async function GET(request: NextRequest) {
       properties: params.get("properties")
         ? params.get("properties")!.split(",")
         : [],
-      tags: params.get("tags")
-        ? params.get("tags")!.split(",")
-        : [],
     };
 
     // Build journey graph
@@ -117,8 +114,8 @@ export async function GET(request: NextRequest) {
       activeCount: workflows.filter((w) => w.status === "ACTIVE").length,
       inactiveCount: workflows.filter((w) => w.status === "INACTIVE").length,
       totalDependencies: dependencies.length,
-      objectTypes: Array.from(new Set(workflows.map((w) => w.objectType))),
-      dependencyTypes: Array.from(new Set(dependencies.map((d) => d.type))),
+      objectTypes: [...new Set(workflows.map((w) => w.objectType))],
+      dependencyTypes: [...new Set(dependencies.map((d) => d.type))],
     };
 
     return NextResponse.json({ nodes, edges, stages, stats });

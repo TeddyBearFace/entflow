@@ -31,10 +31,9 @@ export async function DELETE(request: NextRequest) {
   try {
     // Delete all related data first (cascade should handle most, but be explicit)
     await prisma.$transaction(async (tx) => {
-      const workflowIds = (await tx.workflow.findMany({ where: { portalId }, select: { id: true } })).map(w => w.id);
-      await tx.changelogEntry.deleteMany({ where: { workflowId: { in: workflowIds } } });
-      await tx.workflowSnapshot.deleteMany({ where: { workflowId: { in: workflowIds } } });
-      await tx.workflowTag.deleteMany({ where: { workflowId: { in: workflowIds } } });
+      await tx.changelogEntry.deleteMany({ where: { workflow: { portalId } } });
+      await tx.workflowSnapshot.deleteMany({ where: { workflow: { portalId } } });
+      await tx.workflowTag.deleteMany({ where: { workflow: { portalId } } });
       await tx.nodePosition.deleteMany({ where: { portalId } });
       await tx.customEdge.deleteMany({ where: { portalId } });
       await tx.customNode.deleteMany({ where: { portalId } });

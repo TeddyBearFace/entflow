@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import DashboardSyncBanner from "@/components/DashboardSyncBanner";
+import UpgradeButton from "@/components/UpgradeButton";
+import { getPlan } from "@/lib/plans";
 
 interface DashboardPageProps {
   searchParams: { portal?: string; connected?: string };
@@ -108,6 +110,23 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <main className="max-w-6xl mx-auto px-6 py-8">
         {/* Sync progress */}
         <DashboardSyncBanner portalId={portalId} isSyncing={isSyncing} justConnected={justConnected} />
+
+        {/* Upgrade banner for free users */}
+        {portal.planTier === "FREE" && totalWorkflows > 0 && (
+          <div className="mb-6 px-5 py-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚡</span>
+              <div>
+                <p className="text-sm font-bold text-amber-900">You{"'"}re on the Free plan ({getPlan("FREE").workflowLimit} workflow limit)</p>
+                <p className="text-xs text-amber-700 mt-0.5">Upgrade to Pro for exports, canvas tools, tagging, property impact, and up to 500 workflows.</p>
+              </div>
+            </div>
+            <UpgradeButton portalId={portalId}
+              className="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-semibold text-white hover:shadow-md transition-all bg-[#FF7A59]">
+              Upgrade to Pro — $29/mo
+            </UpgradeButton>
+          </div>
+        )}
 
         {/* Stats grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

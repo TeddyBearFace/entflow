@@ -28,7 +28,6 @@ export interface HubSpotFlowDetail {
   actions: HubSpotAction[];
   createdAt?: string;
   updatedAt?: string;
-  dataSources?: any;
 }
 
 export interface HubSpotEnrollmentCriteria {
@@ -112,10 +111,9 @@ export interface HubSpotApiError {
 
 export interface GraphNode {
   id: string;
-  type: string;
+  type: "workflow";
   position: { x: number; y: number };
-  data: any;
-  style?: Record<string, any>;
+  data: WorkflowNodeData;
 }
 
 export interface WorkflowNodeData {

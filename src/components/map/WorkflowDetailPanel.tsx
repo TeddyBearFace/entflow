@@ -348,7 +348,7 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
     // Remaining fields
     for (const [k, v] of Object.entries(f)) {
       if (hk.has(k)||v===null||v===undefined) continue;
-      const sv = typeof v==="string"?v : typeof v==="number"||typeof v==="boolean"?String(v) : (v as any)?.staticValue!==undefined?String((v as any).staticValue) : null;
+      const sv = typeof v==="string"?v : typeof v==="number"||typeof v==="boolean"?String(v) : v?.staticValue!==undefined?String(v.staticValue) : null;
       if (sv!==null) { if (sv===""||sv==="0"||sv.length>200) continue; const displayVal = isTemplateVar(sv) ? tv(sv) : sv; d.push({label:fp(k),value:displayVal,section:"Other"}); }
     }
     d.push({label:"Action type ID",value:atid,section:"Technical"}); if(action.actionId) d.push({label:"Action ID",value:action.actionId,section:"Technical"});

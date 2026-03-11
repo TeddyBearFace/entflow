@@ -32,6 +32,8 @@ model Portal {
   // Subscription
   planTier        PlanTier   @default(FREE) @map("plan_tier")
   stripeCustomerId String?   @map("stripe_customer_id")
+  stripeSubscriptionId String? @map("stripe_subscription_id")
+  stripeCurrentPeriodEnd DateTime? @map("stripe_current_period_end")
   
   // Auto-sync
   autoSyncEnabled Boolean    @default(false) @map("auto_sync_enabled")
@@ -379,7 +381,7 @@ enum SyncStatus {
 enum PlanTier {
   FREE
   PRO
-  AGENCY
+  ENTERPRISE
 }
 
 enum ObjectType {

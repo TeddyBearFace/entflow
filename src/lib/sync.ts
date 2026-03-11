@@ -53,14 +53,30 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
     data: { syncStatus: "SYNCING", syncProgress: 0, syncTotal: 0, syncMessage: "Starting sync..." },
   });
 
+  // Get plan tier for workflow limit
+  const portal = await prisma.portal.findUnique({
+    where: { id: portalId },
+    select: { planTier: true },
+  });
+  const { getPlan } = await import("./plans");
+  const plan = getPlan(portal?.planTier || "FREE");
+  const workflowLimit = plan.workflowLimit === Infinity ? 999999 : plan.workflowLimit;
+
   try {
     // --- Step 1: Fetch workflow list ---
     console.log(`[Sync ${portalId}] Fetching workflow list...`);
     await updateSyncProgress(portalId, 0, 0, "Discovering workflows...");
-    const workflowSummaries = await fetchAllWorkflows(portalId);
+    let workflowSummaries = await fetchAllWorkflows(portalId);
     console.log(
       `[Sync ${portalId}] Found ${workflowSummaries.length} workflows`
     );
+
+    // Enforce workflow limit based on plan tier
+    if (workflowSummaries.length > workflowLimit) {
+      console.log(`[Sync ${portalId}] Plan limit: ${workflowLimit}, truncating from ${workflowSummaries.length}`);
+      workflowSummaries = workflowSummaries.slice(0, workflowLimit);
+    }
+
     await updateSyncProgress(portalId, 0, workflowSummaries.length, `Found ${workflowSummaries.length} workflows`);
 
     if (workflowSummaries.length === 0) {
@@ -122,7 +138,7 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
     for (const flow of flowDetails) {
       if (flow.actions && Array.isArray(flow.actions)) {
         for (const action of flow.actions) {
-          const contentId = (action as any)?.fields?.content_id;
+          const contentId = action?.fields?.content_id;
           if (contentId && contentId !== "0") {
             emailIds.add(String(contentId));
           }
@@ -147,7 +163,7 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
     for (const flow of flowDetails) {
       if (flow.actions && Array.isArray(flow.actions)) {
         for (const action of flow.actions) {
-          const lid = (action as any)?.fields?.listId || (action as any)?.fields?.list_id || (action as any)?.fields?.staticListId;
+          const lid = action?.fields?.listId || action?.fields?.list_id || action?.fields?.staticListId;
           if (lid) listIds.add(String(lid));
         }
       }
@@ -500,7 +516,7 @@ async function storeResults(
         },
       });
     }
-   }, { timeout: 120000 });
+  });
 }
 
 /**

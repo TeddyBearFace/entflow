@@ -27,6 +27,8 @@ import ExportPanel from "./ExportPanel";
 import CanvasToolbar, { type CanvasTool } from "./CanvasToolbar";
 import { computeSnapAndGuides, SmartGuideLines } from "./SmartGuides";
 import SyncProgress from "@/components/SyncProgress";
+import UpgradePrompt from "@/components/UpgradePrompt";
+import { usePlan } from "@/hooks/usePlan";
 import type { MapFilters, WorkflowNodeData } from "@/types";
 import type { StageGroup } from "@/lib/journey";
 
@@ -79,6 +81,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncKey, setSyncKey] = useState(0);
   const reactFlowInstance = useReactFlow();
+  const { canUse, isFree, plan } = usePlan(portalId);
   const [filters, setFilters] = useState<MapFilters>({
     status: [],
     objectTypes: [],
@@ -555,7 +558,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
             onTextChange: handleTextChange,
           },
         };
-        setNodes(nds => nds.map(n => ({ ...n, selected: false })).concat({ ...newNode, selected: false }));
+        setNodes(nds => nds.map(n => ({ ...n, selected: false })).concat(newNode));
         setSelectedCustomNode(node.id);
         setCanvasTool("select");
       }
@@ -870,6 +873,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         selectedProperty={selectedPropertyKey}
         onSelectProperty={(key, wfIds) => { setSelectedPropertyKey(key); setHighlightedWorkflows(new Set(wfIds)); }}
         onWorkflowClick={(wfId) => { setSelectedWorkflow(wfId); }}
+        canUse={canUse}
       />
 
       {/* Map Canvas */}
@@ -946,23 +950,33 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                 📋 Changelog
               </a>
               {/* Manual sync */}
-              <button onClick={triggerSync} disabled={isSyncing}
-                className={`backdrop-blur-sm rounded-lg shadow-sm border px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${isSyncing ? "bg-blue-50 border-blue-200 text-blue-600 cursor-wait" : "bg-white/90 border-gray-200 text-gray-600 hover:text-gray-800 hover:border-gray-300"}`}>
-                {isSyncing ? (
-                  <><div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-blue-300 border-t-blue-600" /> Syncing...</>
-                ) : (
-                  <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sync</>
-                )}
-              </button>
+              {canUse("manualSync") ? (
+                <button onClick={triggerSync} disabled={isSyncing}
+                  className={`backdrop-blur-sm rounded-lg shadow-sm border px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${isSyncing ? "bg-blue-50 border-blue-200 text-blue-600 cursor-wait" : "bg-white/90 border-gray-200 text-gray-600 hover:text-gray-800 hover:border-gray-300"}`}>
+                  {isSyncing ? (
+                    <><div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-blue-300 border-t-blue-600" /> Syncing...</>
+                  ) : (
+                    <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sync</>
+                  )}
+                </button>
+              ) : (
+                <UpgradePrompt portalId={portalId} feature="Manual sync" inline />
+              )}
               {/* Auto-sync toggle */}
-              <button onClick={toggleAutoSync} className={`backdrop-blur-sm rounded-lg shadow-sm border px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${autoSync.enabled ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white/90 border-gray-200 text-gray-500 hover:text-gray-700"}`}>
-                {autoSync.enabled ? "🔄 Auto-sync on" : "⏸️ Auto-sync off"}
-              </button>
+              {canUse("autoSync") ? (
+                <button onClick={toggleAutoSync} className={`backdrop-blur-sm rounded-lg shadow-sm border px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${autoSync.enabled ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white/90 border-gray-200 text-gray-500 hover:text-gray-700"}`}>
+                  {autoSync.enabled ? "🔄 Auto-sync on" : "⏸️ Auto-sync off"}
+                </button>
+              ) : null}
               {/* Stats */}
               <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-3 py-2 text-xs text-gray-500">
                 {nodes.filter((n) => n.type === "expandedWorkflow").length} workflows · {edges.length} deps
               </div>
-              <ExportPanel portalId={portalId} portalName={portalName} />
+              {canUse("export") ? (
+                <ExportPanel portalId={portalId} portalName={portalName} />
+              ) : (
+                <UpgradePrompt portalId={portalId} feature="Export" inline />
+              )}
             </div>
           </Panel>
 
@@ -985,15 +999,17 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         {/* Smart alignment guides overlay */}
         <SmartGuideLines guides={smartGuides.guides} spacing={smartGuides.spacing} />
 
-        {/* Canvas Toolbar (FigJam-style) */}
-        <CanvasToolbar
-          activeTool={canvasTool}
-          onToolChange={setCanvasTool}
-          activeColor={canvasColor}
-          onColorChange={setCanvasColor}
-          snapToGrid={snapToGrid}
-          onSnapToggle={() => setSnapToGrid(s => !s)}
-        />
+        {/* Canvas Toolbar (FigJam-style) — Pro only */}
+        {canUse("canvas") && (
+          <CanvasToolbar
+            activeTool={canvasTool}
+            onToolChange={setCanvasTool}
+            activeColor={canvasColor}
+            onColorChange={setCanvasColor}
+            snapToGrid={snapToGrid}
+            onSnapToggle={() => setSnapToGrid(s => !s)}
+          />
+        )}
 
         {/* Selected element action bar */}
         {selectedCustomNode && selectedCustomData && (
