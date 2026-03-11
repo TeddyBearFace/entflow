@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const portals = await prisma.portal.findMany({
       where: {
         autoSyncEnabled: true,
-        syncStatus: { not: "IN_PROGRESS" },
+        syncStatus: { not: "SYNCING" },
       },
     });
 
