@@ -129,8 +129,8 @@ export async function GET(request: NextRequest) {
   // 5. Cascade — workflows downstream of our direct dependents
   const directlyAffectedIds = new Set(impacts.flatMap(i => i.affectedWorkflows.map(w => w.id)));
   const cascadeWorkflows: Array<{ id: string; name: string; status: string }> = [];
-  const visited = new Set<string>([workflowId, ...directlyAffectedIds]);
-  const queue = [...directlyAffectedIds];
+  const visited = new Set<string>([workflowId, ...Array.from(directlyAffectedIds)]);
+  const queue = Array.from(directlyAffectedIds);
 
   while (queue.length > 0) {
     const currentId = queue.shift()!;
