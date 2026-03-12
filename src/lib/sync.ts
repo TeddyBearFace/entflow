@@ -16,6 +16,7 @@ import {
   fetchPipelines,
   fetchMarketingEmail,
   fetchListDetails,
+  getValidAccessToken,
 } from "./hubspot";
 import { generateChangelog, hashActions, hashEnrollment } from "./changelog";
 import { parseAllWorkflows } from "./parser";
@@ -63,6 +64,25 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
   const workflowLimit = plan.workflowLimit === Infinity ? 999999 : plan.workflowLimit;
 
   try {
+    // --- Step 0: Verify HubSpot connection is still valid ---
+    console.log(`[Sync ${portalId}] Verifying HubSpot connection...`);
+    await updateSyncProgress(portalId, 0, 0, "Verifying HubSpot connection...");
+    try {
+      await getValidAccessToken(portalId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      console.error(`[Sync ${portalId}] HubSpot connection invalid:`, msg);
+      await prisma.portal.update({
+        where: { id: portalId },
+        data: { syncStatus: "FAILED", syncMessage: "HubSpot disconnected — please reconnect your portal" },
+      });
+      await prisma.syncLog.update({
+        where: { id: syncLog.id },
+        data: { status: "FAILED", error: `Auth failed: ${msg}`, completedAt: new Date() },
+      });
+      return { success: false, workflowCount: 0, dependencyCount: 0, conflictCount: 0, durationMs: Date.now() - startTime, error: msg };
+    }
+
     // --- Step 1: Fetch workflow list ---
     console.log(`[Sync ${portalId}] Fetching workflow list...`);
     await updateSyncProgress(portalId, 0, 0, "Discovering workflows...");
