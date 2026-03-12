@@ -5,6 +5,9 @@ const PUBLIC_ROUTES = [
   "/landing",
   "/connect",
   "/documentation",
+  "/termsofservice",
+  "/privacy",
+  "/pricing",
   "/api",  // All API routes handle their own auth
 ];
 

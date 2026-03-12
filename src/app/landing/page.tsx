@@ -271,7 +271,12 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer style={{ padding: "40px 0", borderTop: "1px solid #E2E8F0", textAlign: "center" }}>
-        <p style={{ fontSize: 13, color: "#5B6471" }}>Entflow for HubSpot · Built for RevOps teams</p>
+        <div style={{ display: "flex", justifyContent: "center", gap: 24, marginBottom: 12 }}>
+          <Link href="/documentation" style={{ fontSize: 13, color: "#5B6471", textDecoration: "none" }}>Documentation</Link>
+          <Link href="/termsofservice" style={{ fontSize: 13, color: "#5B6471", textDecoration: "none" }}>Terms of Service</Link>
+          <Link href="/privacy" style={{ fontSize: 13, color: "#5B6471", textDecoration: "none" }}>Privacy Policy</Link>
+        </div>
+        <p style={{ fontSize: 13, color: "#94A3B8" }}>Entflow for HubSpot · Built for RevOps teams</p>
       </footer>
     </div>
   );
