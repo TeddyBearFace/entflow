@@ -27,7 +27,7 @@ import ExportPanel from "./ExportPanel";
 import CanvasToolbar, { type CanvasTool } from "./CanvasToolbar";
 import { computeSnapAndGuides, SmartGuideLines } from "./SmartGuides";
 import SyncProgress from "@/components/SyncProgress";
-import UpgradePrompt from "@/components/UpgradePrompt";
+import ProGate, { ProBadge } from "@/components/ProGate";
 import { usePlan } from "@/hooks/usePlan";
 import type { MapFilters, WorkflowNodeData } from "@/types";
 import type { StageGroup } from "@/lib/journey";
@@ -473,6 +473,16 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
   useEffect(() => {
     fetch(`/api/auto-sync?portalId=${portalId}`).then(r => r.json()).then(data => {
       if (data.autoSyncEnabled !== undefined) setAutoSync({ enabled: data.autoSyncEnabled, interval: data.autoSyncInterval || 360, lastSynced: data.lastSyncedAt });
+    }).catch(() => {});
+  }, [portalId]);
+
+  // Check if a sync is already running on mount (e.g. navigated here from dashboard mid-sync)
+  useEffect(() => {
+    fetch(`/api/sync-status?portalId=${portalId}`).then(r => r.json()).then(data => {
+      if (data.status === "SYNCING") {
+        setIsSyncing(true);
+        setSyncKey(k => k + 1);
+      }
     }).catch(() => {});
   }, [portalId]);
 
@@ -950,7 +960,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                 📋 Changelog
               </a>
               {/* Manual sync */}
-              {canUse("manualSync") ? (
+              <ProBadge allowed={canUse("manualSync")} portalId={portalId} feature="Manual sync">
                 <button onClick={triggerSync} disabled={isSyncing}
                   className={`backdrop-blur-sm rounded-lg shadow-sm border px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${isSyncing ? "bg-blue-50 border-blue-200 text-blue-600 cursor-wait" : "bg-white/90 border-gray-200 text-gray-600 hover:text-gray-800 hover:border-gray-300"}`}>
                   {isSyncing ? (
@@ -959,24 +969,20 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                     <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sync</>
                   )}
                 </button>
-              ) : (
-                <UpgradePrompt portalId={portalId} feature="Manual sync" inline />
-              )}
+              </ProBadge>
               {/* Auto-sync toggle */}
-              {canUse("autoSync") ? (
+              <ProBadge allowed={canUse("autoSync")} portalId={portalId} feature="Auto-sync">
                 <button onClick={toggleAutoSync} className={`backdrop-blur-sm rounded-lg shadow-sm border px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${autoSync.enabled ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white/90 border-gray-200 text-gray-500 hover:text-gray-700"}`}>
                   {autoSync.enabled ? "🔄 Auto-sync on" : "⏸️ Auto-sync off"}
                 </button>
-              ) : null}
+              </ProBadge>
               {/* Stats */}
               <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-3 py-2 text-xs text-gray-500">
                 {nodes.filter((n) => n.type === "expandedWorkflow").length} workflows · {edges.length} deps
               </div>
-              {canUse("export") ? (
+              <ProBadge allowed={canUse("export")} portalId={portalId} feature="Export">
                 <ExportPanel portalId={portalId} portalName={portalName} />
-              ) : (
-                <UpgradePrompt portalId={portalId} feature="Export" inline />
-              )}
+              </ProBadge>
             </div>
           </Panel>
 
@@ -999,8 +1005,8 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         {/* Smart alignment guides overlay */}
         <SmartGuideLines guides={smartGuides.guides} spacing={smartGuides.spacing} />
 
-        {/* Canvas Toolbar (FigJam-style) — Pro only */}
-        {canUse("canvas") && (
+        {/* Canvas Toolbar (FigJam-style) */}
+        <ProGate allowed={canUse("canvas")} portalId={portalId} feature="Canvas tools">
           <CanvasToolbar
             activeTool={canvasTool}
             onToolChange={setCanvasTool}
@@ -1009,7 +1015,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
             snapToGrid={snapToGrid}
             onSnapToggle={() => setSnapToGrid(s => !s)}
           />
-        )}
+        </ProGate>
 
         {/* Selected element action bar */}
         {selectedCustomNode && selectedCustomData && (

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MapFilters } from "@/types";
-import UpgradePrompt from "@/components/UpgradePrompt";
+import ProGate from "@/components/ProGate";
 
 const STATUS_OPTIONS = [
   { value: "ACTIVE", label: "Active", color: "bg-emerald-400" },
@@ -314,15 +314,10 @@ export default function FilterSidebar({
       </Section>
 
       {/* ═══════ Tags ═══════ */}
-      {canUse && !canUse("tagging") ? (
-        <Section title="Tags" defaultOpen={false}
-          icon={<svg className="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>}>
-          <UpgradePrompt portalId={portalId} feature="Workflow tagging" />
-        </Section>
-      ) : (
       <Section title="Tags" defaultOpen={tags.length > 0}
         count={filters.tags.length}
         icon={<svg className="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>}>
+        <ProGate allowed={!canUse || canUse("tagging")} portalId={portalId} feature="Workflow tagging">
         <div className="px-4 space-y-2">
           {tags.length === 0 && !showTagInput && (
             <p className="text-[11px] text-gray-400 italic">No tags yet</p>
@@ -361,21 +356,11 @@ export default function FilterSidebar({
             </button>
           )}
         </div>
+        </ProGate>
       </Section>
-      )}
 
       {/* ═══════ Property Impact ═══════ */}
-      {canUse && !canUse("propertyImpact") ? (
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100">
-            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-            <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Property Impact</h4>
-          </div>
-          <UpgradePrompt portalId={portalId} feature="Property impact analysis" />
-        </div>
-      ) : (
+      <ProGate allowed={!canUse || canUse("propertyImpact")} portalId={portalId} feature="Property impact analysis" className="flex-1 flex flex-col min-h-0">
       <div className="flex-1 flex flex-col min-h-0">
         <button onClick={() => setImpactExpanded(!impactExpanded)}
           className="flex items-center justify-between w-full px-4 py-2.5 border-b border-gray-100 hover:bg-gray-50/50 transition-colors flex-shrink-0">
@@ -542,7 +527,7 @@ export default function FilterSidebar({
           </div>
         )}
       </div>
-      )}
+      </ProGate>
     </div>
   );
 }
