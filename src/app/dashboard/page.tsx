@@ -101,7 +101,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     take: 5,
   });
 
-  const isSyncing = portal.syncStatus === "SYNCING";
+  const isSyncing = false; // Only sync manually or on first connect
   const justConnected = searchParams.connected === "true";
 
   return (
