@@ -28,7 +28,7 @@ export function usePlan(portalId: string) {
   useEffect(() => { fetchPlan(); }, [fetchPlan]);
 
   const canUse = (feature: keyof PlanConfig["features"]) => {
-    if (!plan) return true; // Allow while loading
+    if (!plan) return false; // Block until plan loads
     return plan.features[feature];
   };
 

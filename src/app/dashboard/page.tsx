@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
 import DashboardSyncBanner from "@/components/DashboardSyncBanner";
+import DisconnectButton from "@/components/DisconnectButton";
 import UpgradeButton from "@/components/UpgradeButton";
 import { getPlan } from "@/lib/plans";
+
 
 interface DashboardPageProps {
   searchParams: { portal?: string; connected?: string };
@@ -314,6 +316,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </div>
           </div>
         )}
+        {/* Portal management */}
+        <div className="mt-8 pt-6 border-t border-gray-200 flex items-center justify-between">
+          <p className="text-xs text-gray-400">
+            Portal: {portal.name || portal.hubspotPortalId} · Plan: {portal.planTier}
+          </p>
+          <DisconnectButton portalId={portalId} portalName={portal.name || portal.hubspotPortalId} />
+        </div>
       </main>
     </div>
   );
