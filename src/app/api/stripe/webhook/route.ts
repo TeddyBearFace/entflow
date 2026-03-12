@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
             data: {
               planTier: "PRO",
               stripeSubscriptionId: subscription.id,
-              stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+              stripeCurrentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
             },
           });
           console.log(`[Stripe] Portal ${portalId} upgraded to PRO`);
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       }
 
       case "invoice.paid": {
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice = event.data.object as any;
         if (invoice.subscription) {
           const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
           const portalId = subscription.metadata?.portalId;
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
               where: { id: portalId },
               data: {
                 planTier: "PRO",
-                stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+                stripeCurrentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
               },
             });
           }
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
             data: {
               planTier: isActive ? "PRO" : "FREE",
               stripeSubscriptionId: subscription.id,
-              stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+              stripeCurrentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
             },
           });
           console.log(`[Stripe] Portal ${portalId} subscription updated: ${subscription.status} → ${isActive ? "PRO" : "FREE"}`);

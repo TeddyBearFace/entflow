@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
         const orderMap = stageOrderByType.get(objectType)!;
         if (orderMap.has(rawVal)) return orderMap.get(rawVal)!;
       }
-      for (const [, orderMap] of stageOrderByType) {
+      for (const [, orderMap] of Array.from(stageOrderByType)) {
         if (orderMap.has(rawVal)) return orderMap.get(rawVal)!;
       }
       return rawVal;
