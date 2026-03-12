@@ -50,7 +50,7 @@ export default function DashboardSyncBanner({ portalId, isSyncing: serverSyncing
     return (
       <div className="mb-6 px-5 py-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">🔌</span>
+          <span className="text-2xl">{"\uD83D\uDD0C"}</span>
           <div>
             <p className="text-sm font-bold text-red-900">HubSpot Disconnected</p>
             <p className="text-xs text-red-700 mt-0.5">Your HubSpot app has been disconnected. Reconnect to resume syncing.</p>
@@ -69,7 +69,7 @@ export default function DashboardSyncBanner({ portalId, isSyncing: serverSyncing
     return (
       <div className="mb-6 px-5 py-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">⚠️</span>
+          <span className="text-2xl">{"\u26A0\uFE0F"}</span>
           <div>
             <p className="text-sm font-bold text-amber-900">Last sync failed</p>
             <p className="text-xs text-amber-700 mt-0.5 max-w-md truncate">{syncMessage || "Unknown error"}</p>
