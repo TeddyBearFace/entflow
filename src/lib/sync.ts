@@ -313,7 +313,8 @@ async function storeResults(
   emails: Array<{ id: string; name: string; subject: string }>,
   lists: Array<{ id: string; name: string }>
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  const tx = prisma;
+  {
     // Clear existing dependency, conflict, and property index data for this portal
     // (we rebuild it fresh each sync)
     await tx.dependency.deleteMany({ where: { portalId } });
@@ -545,7 +546,7 @@ async function storeResults(
         },
       });
       }
-  }, { timeout: 120000 });
+  }
 }
 /**
  * Mark a sync as complete and update the portal's sync status.
