@@ -11,6 +11,7 @@ interface CanvasToolbarProps {
   onColorChange: (color: string) => void;
   snapToGrid: boolean;
   onSnapToggle: () => void;
+  lockedTools?: CanvasTool[];
 }
 
 const TOOLS: Array<{ id: CanvasTool; icon: JSX.Element; label: string; group?: string }> = [
@@ -61,33 +62,39 @@ const COLORS = [
   "#000000", // Black
 ];
 
-export default function CanvasToolbar({ activeTool, onToolChange, activeColor, onColorChange, snapToGrid, onSnapToggle }: CanvasToolbarProps) {
+export default function CanvasToolbar({ activeTool, onToolChange, activeColor, onColorChange, snapToGrid, onSnapToggle, lockedTools = [] }: CanvasToolbarProps) {
   const [showColors, setShowColors] = useState(false);
+  const lockedSet = new Set(lockedTools);
 
   return (
     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
       {/* Main toolbar */}
       <div className="flex items-center bg-white rounded-2xl shadow-lg border border-gray-200 p-1.5 gap-0.5">
-        {TOOLS.map((tool, i) => (
+        {TOOLS.map((tool, i) => {
+          const isLocked = lockedSet.has(tool.id);
+          return (
           <div key={tool.id} className="flex items-center">
             {tool.group === "divider" && i > 0 && <div className="w-px h-7 bg-gray-200 mx-1" />}
             <button
               onClick={() => onToolChange(tool.id)}
               className={`relative p-2.5 rounded-xl transition-all group ${
-                activeTool === tool.id
+                isLocked
+                  ? "text-gray-300 cursor-not-allowed"
+                  : activeTool === tool.id
                   ? "bg-blue-100 text-blue-700 shadow-sm"
                   : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
               }`}
-              title={tool.label}
+              title={isLocked ? `${tool.label} — Pro plan` : tool.label}
             >
               {tool.icon}
               {/* Tooltip */}
               <span className="absolute -top-9 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-[10px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                {tool.label}
+                {tool.label}{isLocked ? " ⚡ Pro" : ""}
               </span>
             </button>
           </div>
-        ))}
+          );
+        })}
 
         {/* Divider before snap */}
         <div className="w-px h-7 bg-gray-200 mx-1" />

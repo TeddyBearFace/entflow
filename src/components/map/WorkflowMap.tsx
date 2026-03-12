@@ -985,6 +985,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
               </a>
               {/* Manual sync */}
               <button onClick={triggerSync} disabled={isSyncing || syncOnCooldown}
+                title={syncOnCooldown ? "Free plan: sync once every 2h. Upgrade to Pro for unlimited syncs." : undefined}
                 className={`backdrop-blur-sm rounded-lg shadow-sm border px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
                   isSyncing ? "bg-blue-50 border-blue-200 text-blue-600 cursor-wait"
                   : syncOnCooldown ? "bg-white/90 border-gray-200 text-gray-400 cursor-not-allowed"
@@ -1009,7 +1010,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                 {nodes.filter((n) => n.type === "expandedWorkflow").length} workflows · {edges.length} deps
               </div>
               <ProBadge allowed={canUse("export")} portalId={portalId} feature="Export">
-                <ExportPanel portalId={portalId} portalName={portalName} />
+                <ExportPanel portalId={portalId} portalName={portalName} canUseAdvancedExport={canUse("exportAdvanced")} />
               </ProBadge>
             </div>
           </Panel>
@@ -1037,11 +1038,16 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         <ProGate allowed={canUse("canvas")} portalId={portalId} feature="Canvas tools">
           <CanvasToolbar
             activeTool={canvasTool}
-            onToolChange={setCanvasTool}
+            onToolChange={(tool) => {
+              const advancedTools = new Set(["shape_rect", "shape_diamond", "shape_circle", "connector", "text"]);
+              if (advancedTools.has(tool) && !canUse("canvasAdvanced")) return; // Block in ProGate popover
+              setCanvasTool(tool);
+            }}
             activeColor={canvasColor}
             onColorChange={setCanvasColor}
             snapToGrid={snapToGrid}
             onSnapToggle={() => setSnapToGrid(s => !s)}
+            lockedTools={canUse("canvasAdvanced") ? [] : ["shape_rect", "shape_diamond", "shape_circle", "connector", "text"]}
           />
         </ProGate>
 

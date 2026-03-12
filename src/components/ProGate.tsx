@@ -103,10 +103,10 @@ export default function ProGate({ allowed, portalId, feature, children, badge = 
             <div className="relative">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-base">⚡</span>
-                <span className="text-sm font-bold text-gray-900">Pro Feature</span>
+                <span className="text-sm font-bold text-gray-900">Paid Feature</span>
               </div>
               <p className="text-xs text-gray-500 leading-relaxed mb-3">
-                {feature ? `${feature} is` : "This is"} available on the Pro plan. Upgrade to unlock this and all other Pro features.
+                {feature ? `${feature} requires` : "This requires"} a paid plan. Plans start at $9/mo.
               </p>
               <button
                 onClick={handleUpgrade}
@@ -114,7 +114,7 @@ export default function ProGate({ allowed, portalId, feature, children, badge = 
                 className="w-full py-2 rounded-lg text-sm font-semibold text-white transition-all hover:shadow-md disabled:opacity-50"
                 style={{ backgroundColor: "#FF7A59" }}
               >
-                {loading ? "Loading..." : "Upgrade — $29/mo"}
+                {loading ? "Loading..." : "View Plans"}
               </button>
             </div>
           </div>
@@ -179,12 +179,12 @@ export function ProBadge({ allowed, portalId, feature, children, className }: Om
           <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-[70] bg-white rounded-lg shadow-xl border border-gray-200 p-3 w-[200px]">
             <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-white border-l border-t border-gray-200 rotate-45" />
             <p className="text-xs text-gray-600 mb-2 relative">
-              <strong className="text-gray-900">⚡ {feature || "Pro"}</strong> — upgrade to unlock.
+              <strong className="text-gray-900">⚡ {feature || "Paid"}</strong> — upgrade to unlock.
             </p>
             <button onClick={handleUpgrade} disabled={loading}
               className="w-full py-1.5 rounded-md text-xs font-semibold text-white disabled:opacity-50"
               style={{ backgroundColor: "#FF7A59" }}>
-              {loading ? "..." : "Upgrade — $29/mo"}
+              {loading ? "..." : "View Plans"}
             </button>
           </div>
         </>

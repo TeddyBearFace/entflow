@@ -42,8 +42,8 @@ export default function SyncProgress({ portalId, onComplete, compact = false }: 
           if (prev === "WAITING") activeStartRef.current = Date.now();
           return "ACTIVE";
         });
-        // If stuck syncing for over 3 minutes, treat as failed
-        if (activeStartRef.current > 0 && Date.now() - activeStartRef.current > 180000) {
+        // If stuck syncing for over 5 minutes (matches server stale detection), treat as failed
+        if (activeStartRef.current > 0 && Date.now() - activeStartRef.current > 300000) {
           setPhase("DONE");
         }
       } else if (data.status === "COMPLETED" || data.status === "FAILED") {

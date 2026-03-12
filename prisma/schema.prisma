@@ -380,6 +380,8 @@ enum SyncStatus {
 
 enum PlanTier {
   FREE
+  STARTER
+  GROWTH
   PRO
   ENTERPRISE
 }

@@ -440,12 +440,14 @@ export default function FilterSidebar({
                       const isSelected = selectedProperty === key || selectedProperty === conflictKey;
                       const activeWriters = p.writers.filter(w => w.status === "ACTIVE");
 
+                      const showConflicts = !canUse || canUse("propertyConflicts");
+
                       return (
                         <div key={key}>
                           {/* Property row */}
                           <button onClick={() => handlePropertyClick(p)}
                             className={`w-full text-left px-3 py-2 transition-colors border-b border-gray-50 ${isSelected ? "bg-blue-50" : "hover:bg-gray-50"}`}
-                            style={p.hasConflict ? { borderLeft: "3px solid #EF4444" } : {}}>
+                            style={p.hasConflict && showConflicts ? { borderLeft: "3px solid #EF4444" } : {}}>
                             <div className="flex flex-wrap items-start gap-1.5">
                               <span className="text-xs font-medium text-gray-800 flex-1 break-words min-w-0">{p.label}</span>
                               <div className="flex items-center gap-1 flex-shrink-0">
@@ -458,8 +460,8 @@ export default function FilterSidebar({
                               </div>
                             </div>
 
-                            {/* Conflict warning - collapsible */}
-                            {p.hasConflict && (
+                            {/* Conflict warning - collapsible (Growth+ only) */}
+                            {p.hasConflict && showConflicts && (
                               <details className="mt-1.5 rounded-md bg-red-50 border border-red-200 overflow-hidden group/conflict">
                                 <summary className="px-2 py-1.5 cursor-pointer list-none flex items-center gap-1.5 hover:bg-red-100/50 transition-colors"
                                   onClick={(e) => e.stopPropagation()}>
@@ -595,7 +597,7 @@ function PropertyImpactLocked({ portalId }: { portalId: string }) {
           <button onClick={handleUpgrade} disabled={loading}
             className="px-4 py-2 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md disabled:opacity-50"
             style={{ backgroundColor: "#FF7A59" }}>
-            {loading ? "Loading..." : "Upgrade to Pro — $29/mo"}
+            {loading ? "Loading..." : "Upgrade from $9/mo"}
           </button>
         </div>
       </div>

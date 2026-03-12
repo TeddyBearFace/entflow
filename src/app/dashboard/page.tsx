@@ -120,12 +120,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <span className="text-2xl">⚡</span>
               <div>
                 <p className="text-sm font-bold text-amber-900">You{"'"}re on the Free plan ({getPlan("FREE").workflowLimit} workflow limit)</p>
-                <p className="text-xs text-amber-700 mt-0.5">Upgrade to Pro for exports, canvas tools, tagging, property impact, and up to 500 workflows.</p>
+                <p className="text-xs text-amber-700 mt-0.5">Upgrade from $9/mo for unlimited syncs, tagging, exports, and up to 300 workflows.</p>
               </div>
             </div>
             <UpgradeButton portalId={portalId}
               className="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-semibold text-white hover:shadow-md transition-all bg-[#FF7A59]">
-              Upgrade to Pro — $29/mo
+              View Plans
             </UpgradeButton>
           </div>
         )}

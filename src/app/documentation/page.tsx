@@ -155,7 +155,7 @@ export default function DocumentationPage() {
             </P>
 
             <Callout type="info">
-              Free accounts are limited to 10 workflows. <A href="#plans">Upgrade to Pro</A> for up to 500 workflows with full canvas tools, tagging, export, and more.
+              Free accounts are limited to 10 workflows. <A href="#plans">Upgrade</A> from $9/mo for more workflows, unlimited syncs, tagging, exports, and more.
             </Callout>
           </Section>
 
@@ -393,20 +393,19 @@ export default function DocumentationPage() {
 
           {/* Plans */}
           <Section id="plans" title="Plans & Pricing" subtitle="Start free, upgrade when you need more.">
-            <Table headers={["Feature", "Free", "Pro ($29/mo)", "Enterprise"]}>
-              <TR cells={["Workflows", "Up to 10", "Up to 500", "Unlimited"]} />
-              <TR cells={["Visual dependency map", "✓", "✓", "✓"]} />
-              <TR cells={["Conflict detection", "✓", "✓", "✓"]} />
-              <TR cells={["Changelog", "✓", "✓", "✓"]} />
-              <TR cells={["Diff view", "✓", "✓", "✓"]} />
-              <TR cells={["Canvas tools", "✗", "✓", "✓"]} />
-              <TR cells={["Tagging", "✗", "✓", "✓"]} />
-              <TR cells={["Property impact", "✗", "✓", "✓"]} />
-              <TR cells={["Export (PNG/SVG/PDF)", "✗", "✓", "✓"]} />
-              <TR cells={["Manual sync", "✗", "✓", "✓"]} />
-              <TR cells={["Auto-sync", "✗", "✓", "✓"]} />
-              <TR cells={["Multi-portal", "✗", "✗", "✓"]} />
-              <TR cells={["Priority support", "✗", "✓", "✓"]} />
+            <Table headers={["Feature", "Free", "Starter ($9)", "Growth ($19)", "Pro ($29)", "Enterprise"]}>
+              <TR cells={["Workflows", "10", "25", "100", "300", "Unlimited"]} />
+              <TR cells={["Dependency map", "✓", "✓", "✓", "✓", "✓"]} />
+              <TR cells={["Conflict detection", "✓", "✓", "✓", "✓", "✓"]} />
+              <TR cells={["Changelog + diffs", "✓", "✓", "✓", "✓", "✓"]} />
+              <TR cells={["Manual sync", "2h cooldown", "Unlimited", "Unlimited", "Unlimited", "Unlimited"]} />
+              <TR cells={["Tags", "✗", "✓", "✓", "✓", "✓"]} />
+              <TR cells={["Property impact", "✗", "View only", "Full + conflicts", "Full + conflicts", "Full"]} />
+              <TR cells={["Export", "✗", "PNG + CSV", "PNG + CSV", "All formats", "All formats"]} />
+              <TR cells={["Canvas tools", "✗", "✗", "Sections + stickies", "Full toolkit", "Full toolkit"]} />
+              <TR cells={["Auto-sync", "✗", "✗", "✗", "✓", "✓"]} />
+              <TR cells={["Multi-portal", "✗", "✗", "✗", "✗", "✓"]} />
+              <TR cells={["Priority support", "✗", "✗", "✗", "✓", "✓"]} />
             </Table>
           </Section>
 
@@ -443,7 +442,7 @@ export default function DocumentationPage() {
             </FAQ>
 
             <FAQ q="How often does my data sync?">
-              Free accounts sync on initial connection. Pro accounts can trigger manual syncs at any time and enable auto-sync (default: every 6 hours). Enterprise accounts have configurable sync intervals.
+              Free accounts sync on initial connection with a 2-hour cooldown between syncs. All paid plans (Starter and above) get unlimited manual syncs. Pro and Enterprise accounts can also enable auto-sync (default: every 6 hours).
             </FAQ>
 
             <FAQ q="What happens if I delete a workflow in HubSpot?">

@@ -6,9 +6,10 @@ import { useReactFlow, getRectOfNodes } from "reactflow";
 interface ExportPanelProps {
   portalId: string;
   portalName?: string;
+  canUseAdvancedExport?: boolean;
 }
 
-export default function ExportPanel({ portalId, portalName }: ExportPanelProps) {
+export default function ExportPanel({ portalId, portalName, canUseAdvancedExport = true }: ExportPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const reactFlow = useReactFlow();
@@ -220,10 +221,11 @@ export default function ExportPanel({ portalId, portalName }: ExportPanelProps) 
               <ExportOption
                 icon="📄"
                 title="PDF Document"
-                description="High-quality PDF for presentations and reports"
+                description={canUseAdvancedExport ? "High-quality PDF for presentations and reports" : "Pro plan — upgrade to unlock"}
                 onClick={exportPDF}
                 loading={exporting === "pdf"}
-                disabled={!!exporting}
+                disabled={!!exporting || !canUseAdvancedExport}
+                locked={!canUseAdvancedExport}
               />
 
               {/* SVG for Figma */}
@@ -238,10 +240,11 @@ export default function ExportPanel({ portalId, portalName }: ExportPanelProps) 
                   </svg>
                 }
                 title="SVG for Figma"
-                description="Import directly into Figma via File → Place Image"
+                description={canUseAdvancedExport ? "Import directly into Figma via File → Place Image" : "Pro plan — upgrade to unlock"}
                 onClick={exportSVG}
                 loading={exporting === "svg"}
-                disabled={!!exporting}
+                disabled={!!exporting || !canUseAdvancedExport}
+                locked={!canUseAdvancedExport}
               />
 
               {/* PNG for Miro */}
@@ -282,6 +285,7 @@ function ExportOption({
   onClick,
   loading,
   disabled,
+  locked,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -289,18 +293,22 @@ function ExportOption({
   onClick: () => void;
   loading: boolean;
   disabled: boolean;
+  locked?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left disabled:opacity-50"
+      className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left disabled:opacity-50 ${locked ? "opacity-40" : ""}`}
     >
       <span className="text-lg flex-shrink-0 mt-0.5">
         {typeof icon === "string" ? icon : icon}
       </span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-800">{title}</p>
+        <p className="text-sm font-medium text-gray-800 flex items-center gap-1.5">
+          {title}
+          {locked && <span className="text-[8px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 py-px">⚡ Pro</span>}
+        </p>
         <p className="text-[10px] text-gray-400 leading-relaxed">{description}</p>
       </div>
       {loading && (

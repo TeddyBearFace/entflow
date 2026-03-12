@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { stripe, PRO_PRICE_ID } from "@/lib/stripe";
+import { stripe, PRICE_IDS } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
   try {
     if (!stripe) return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
-    const { portalId } = await request.json();
+    const { portalId, tier } = await request.json();
     if (!portalId) return NextResponse.json({ error: "portalId required" }, { status: 400 });
 
     const portal = await prisma.portal.findUnique({ where: { id: portalId } });
     if (!portal) return NextResponse.json({ error: "Portal not found" }, { status: 404 });
 
-    if (!PRO_PRICE_ID) return NextResponse.json({ error: "Stripe price not configured" }, { status: 500 });
+    // Determine which price to use
+    const targetTier = (tier || "PRO").toUpperCase();
+    const priceId = PRICE_IDS[targetTier];
+    if (!priceId) {
+      // No price configured for this tier — redirect to landing pricing
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      return NextResponse.json({ url: `${appUrl}/landing#pricing` });
+    }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -32,11 +39,11 @@ export async function POST(request: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
-      line_items: [{ price: PRO_PRICE_ID, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/dashboard?portal=${portalId}&upgraded=true`,
       cancel_url: `${appUrl}/dashboard?portal=${portalId}`,
-      metadata: { portalId },
-      subscription_data: { metadata: { portalId } },
+      metadata: { portalId, tier: targetTier },
+      subscription_data: { metadata: { portalId, tier: targetTier } },
     });
 
     return NextResponse.json({ url: session.url });

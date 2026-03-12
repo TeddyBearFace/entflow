@@ -71,6 +71,21 @@ export default function DashboardSyncBanner({ portalId, isSyncing: serverSyncing
     router.refresh();
   }, [router, isFree]);
 
+  const handleUpgrade = useCallback(async (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ portalId }),
+      });
+      if (res.ok) {
+        const { url } = await res.json();
+        if (url) window.location.href = url;
+      }
+    } catch {}
+  }, [portalId]);
+
   if (syncing) {
     return <div className="mb-6"><SyncProgress key={syncKey} portalId={portalId} onComplete={handleComplete} /></div>;
   }
@@ -116,18 +131,23 @@ export default function DashboardSyncBanner({ portalId, isSyncing: serverSyncing
         <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
-        <span className="text-sm text-gray-600">
-          {onCooldown
-            ? <>Next sync available in <span className="font-medium text-gray-800">{formatCountdown(cooldownMs)}</span></>
-            : "Pull latest workflow changes from HubSpot"
-          }
-        </span>
-        {isFree && !onCooldown && (
-          <span className="text-[10px] text-gray-400">Free: once every 2h</span>
-        )}
+        <div>
+          <span className="text-sm text-gray-600">
+            {onCooldown
+              ? <>Next sync available in <span className="font-medium text-gray-800">{formatCountdown(cooldownMs)}</span></>
+              : "Pull latest workflow changes from HubSpot"
+            }
+          </span>
+          {isFree && onCooldown && (
+            <p className="text-[10px] text-gray-400 mt-0.5">Free plan: sync once every 2h. <a href="#" onClick={handleUpgrade} className="text-blue-500 hover:text-blue-600 font-medium">Upgrade to Pro</a> for unlimited syncs.</p>
+          )}
+          {isFree && !onCooldown && (
+            <p className="text-[10px] text-gray-400 mt-0.5">Free plan: sync once every 2h. Pro users get unlimited syncs.</p>
+          )}
+        </div>
       </div>
       <button onClick={triggerSync} disabled={onCooldown}
-        className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${
+        className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors flex-shrink-0 ${
           onCooldown
             ? "text-gray-400 cursor-not-allowed"
             : "text-blue-600 hover:text-blue-700 hover:bg-blue-50"

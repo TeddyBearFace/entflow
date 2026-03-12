@@ -110,7 +110,18 @@ export default function ChangelogPage() {
                               <span className="text-xs text-gray-400">{new Date(entry.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}</span>
                             </div>
                             <p className="text-sm font-medium text-gray-900 mt-1">{entry.summary}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">in <span className="font-medium">{entry.workflowName}</span></p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              in <span className="font-medium">{entry.workflowName}</span>
+                              {entry.workflowId && (
+                                <Link href={`/changelog/diff?portal=${portalId}&workflow=${entry.workflowId}`}
+                                  onClick={e => e.stopPropagation()}
+                                  className="ml-1.5 text-blue-500 hover:text-blue-700 transition-colors inline-flex items-center gap-0.5"
+                                  title="View diff">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                                  diff
+                                </Link>
+                              )}
+                            </p>
                           </div>
                           {hasDetails && (
                             <svg className={`w-4 h-4 text-gray-400 mt-1 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
@@ -134,6 +145,15 @@ export default function ChangelogPage() {
                               <div className="mt-2">
                                 <p className="text-[10px] font-bold text-emerald-400 uppercase mb-1">Current</p>
                                 <div className="text-xs text-gray-600 font-mono bg-emerald-50 rounded-lg p-2 break-all">{entry.newValue.slice(0, 300)}</div>
+                              </div>
+                            )}
+                            {entry.workflowId && (
+                              <div className="mt-3">
+                                <Link href={`/changelog/diff?portal=${portalId}&workflow=${entry.workflowId}`}
+                                  className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50 transition-colors">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+                                  View full diff for this workflow
+                                </Link>
                               </div>
                             )}
                           </div>
