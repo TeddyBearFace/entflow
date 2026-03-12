@@ -45,6 +45,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Mark as syncing immediately so UI picks it up
+    await prisma.portal.update({ where: { id: portalId }, data: { syncStatus: "SYNCING", syncMessage: "Starting sync..." } });
+
     // Trigger sync (non-blocking - return immediately, let client poll for progress)
     syncPortal(portalId).catch(err =>
       console.error(`Sync failed for portal ${portalId}:`, err)
