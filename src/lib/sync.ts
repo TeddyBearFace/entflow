@@ -313,239 +313,115 @@ async function storeResults(
   emails: Array<{ id: string; name: string; subject: string }>,
   lists: Array<{ id: string; name: string }>
 ): Promise<void> {
-  const tx = prisma;
-  {
-    // Clear existing dependency, conflict, and property index data for this portal
-    // (we rebuild it fresh each sync)
-    await tx.dependency.deleteMany({ where: { portalId } });
-    await tx.conflictWorkflow.deleteMany({
-      where: { conflict: { portalId } },
-    });
-    await tx.conflict.deleteMany({ where: { portalId } });
-    await tx.propertyIndex.deleteMany({ where: { portalId } });
+  // Clear existing data (rebuild fresh each sync)
+  await prisma.dependency.deleteMany({ where: { portalId } });
+  await prisma.conflictWorkflow.deleteMany({ where: { conflict: { portalId } } });
+  await prisma.conflict.deleteMany({ where: { portalId } });
+  await prisma.propertyIndex.deleteMany({ where: { portalId } });
 
-    // Upsert workflows
-    const workflowIdMap = new Map<string, string>(); // hubspotFlowId -> internal id
-
-    for (const parsed of parsedWorkflows) {
-      const detail = flowDetails.find((f) => f.id === parsed.hubspotFlowId);
-
-      const workflow = await tx.workflow.upsert({
-        where: {
-          portalId_hubspotFlowId: {
-            portalId,
-            hubspotFlowId: parsed.hubspotFlowId,
-          },
-        },
-        update: {
-          name: parsed.name,
-          objectType: parsed.objectType as any,
-          status: parsed.status as any,
-          flowType: parsed.flowType,
-          enrollmentCriteria: detail?.enrollmentCriteria as any,
-          actions: detail?.actions as any,
-          dataSources: detail?.dataSources as any,
-          actionCount: parsed.actionCount,
-          hubspotUpdatedAt: detail?.updatedAt
-            ? new Date(detail.updatedAt)
-            : undefined,
-        },
-        create: {
-          portalId,
-          hubspotFlowId: parsed.hubspotFlowId,
-          name: parsed.name,
-          objectType: parsed.objectType as any,
-          status: parsed.status as any,
-          flowType: parsed.flowType,
-          enrollmentCriteria: detail?.enrollmentCriteria as any,
-          actions: detail?.actions as any,
-          dataSources: detail?.dataSources as any,
-          actionCount: parsed.actionCount,
-          hubspotCreatedAt: detail?.createdAt
-            ? new Date(detail.createdAt)
-            : undefined,
-          hubspotUpdatedAt: detail?.updatedAt
-            ? new Date(detail.updatedAt)
-            : undefined,
-        },
-      });
-
-      workflowIdMap.set(parsed.hubspotFlowId, workflow.id);
-    }
-
-    // Remove workflows that no longer exist in HubSpot
-    const currentFlowIds = parsedWorkflows.map((p) => p.hubspotFlowId);
-    await tx.workflow.deleteMany({
-      where: {
+  // Upsert workflows
+  const workflowIdMap = new Map<string, string>();
+  for (const parsed of parsedWorkflows) {
+    const detail = flowDetails.find((f) => f.id === parsed.hubspotFlowId);
+    const workflow = await prisma.workflow.upsert({
+      where: { portalId_hubspotFlowId: { portalId, hubspotFlowId: parsed.hubspotFlowId } },
+      update: {
+        name: parsed.name,
+        objectType: parsed.objectType as any,
+        status: parsed.status as any,
+        flowType: parsed.flowType,
+        enrollmentCriteria: detail?.enrollmentCriteria as any,
+        actions: detail?.actions as any,
+        dataSources: (detail as any)?.dataSources as any,
+        actionCount: parsed.actionCount,
+        hubspotUpdatedAt: detail?.updatedAt ? new Date(detail.updatedAt) : undefined,
+      },
+      create: {
         portalId,
-        hubspotFlowId: { notIn: currentFlowIds },
+        hubspotFlowId: parsed.hubspotFlowId,
+        name: parsed.name,
+        objectType: parsed.objectType as any,
+        status: parsed.status as any,
+        flowType: parsed.flowType,
+        enrollmentCriteria: detail?.enrollmentCriteria as any,
+        actions: detail?.actions as any,
+        dataSources: (detail as any)?.dataSources as any,
+        actionCount: parsed.actionCount,
+        hubspotCreatedAt: detail?.createdAt ? new Date(detail.createdAt) : undefined,
+        hubspotUpdatedAt: detail?.updatedAt ? new Date(detail.updatedAt) : undefined,
       },
     });
+    workflowIdMap.set(parsed.hubspotFlowId, workflow.id);
+  }
 
-    // Create dependency edges
-    for (const edge of dependencyGraph.edges) {
-      const sourceId = workflowIdMap.get(edge.sourceFlowId);
-      const targetId = workflowIdMap.get(edge.targetFlowId);
+  // Remove workflows that no longer exist
+  const currentFlowIds = parsedWorkflows.map((p) => p.hubspotFlowId);
+  await prisma.workflow.deleteMany({ where: { portalId, hubspotFlowId: { notIn: currentFlowIds } } });
 
-      if (!sourceId) continue; // Skip if source workflow not found
+  // Create dependencies
+  for (const edge of dependencyGraph.edges) {
+    const sourceId = workflowIdMap.get(edge.sourceFlowId);
+    const targetId = workflowIdMap.get(edge.targetFlowId);
+    if (!sourceId) continue;
+    await prisma.dependency.create({
+      data: { portalId, sourceWorkflowId: sourceId, targetWorkflowId: targetId || null, type: edge.type as any, severity: edge.severity as any, description: edge.description, detail: edge.detail as any },
+    });
+  }
 
-      await tx.dependency.create({
-        data: {
-          portalId,
-          sourceWorkflowId: sourceId,
-          targetWorkflowId: targetId || null,
-          type: edge.type as any,
-          severity: edge.severity as any,
-          description: edge.description,
-          detail: edge.detail as any,
-        },
-      });
-    }
+  // Create property index
+  for (const prop of dependencyGraph.propertyIndex) {
+    await prisma.propertyIndex.upsert({
+      where: { portalId_propertyName_objectType: { portalId, propertyName: prop.propertyName, objectType: prop.objectType } },
+      update: { readByWorkflows: prop.readByWorkflows, writtenByWorkflows: prop.writtenByWorkflows },
+      create: { portalId, propertyName: prop.propertyName, objectType: prop.objectType, readByWorkflows: prop.readByWorkflows, writtenByWorkflows: prop.writtenByWorkflows },
+    });
+  }
 
-    // Create property index entries
-    for (const prop of dependencyGraph.propertyIndex) {
-      await tx.propertyIndex.upsert({
-        where: {
-          portalId_propertyName_objectType: {
-            portalId,
-            propertyName: prop.propertyName,
-            objectType: prop.objectType,
-          },
-        },
-        update: {
-          readByWorkflows: prop.readByWorkflows,
-          writtenByWorkflows: prop.writtenByWorkflows,
-        },
-        create: {
-          portalId,
-          propertyName: prop.propertyName,
-          objectType: prop.objectType,
-          readByWorkflows: prop.readByWorkflows,
-          writtenByWorkflows: prop.writtenByWorkflows,
-        },
-      });
-    }
-
-    // Create conflict records
-    for (const conflict of conflicts) {
-      const conflictRecord = await tx.conflict.create({
-        data: {
-          portalId,
-          type: conflict.type as any,
-          severity: conflict.severity as any,
-          description: conflict.description,
-          detail: conflict.detail as any,
-        },
-      });
-
-      // Link workflows to conflicts
-      for (const hubspotFlowId of conflict.involvedWorkflowIds) {
-        const workflowId = workflowIdMap.get(hubspotFlowId);
-        if (workflowId) {
-          await tx.conflictWorkflow.create({
-            data: {
-              conflictId: conflictRecord.id,
-              workflowId,
-            },
-          });
-        }
+  // Create conflicts
+  for (const conflict of conflicts) {
+    const conflictRecord = await prisma.conflict.create({
+      data: { portalId, type: conflict.type as any, severity: conflict.severity as any, description: conflict.description, detail: conflict.detail as any },
+    });
+    for (const hubspotFlowId of conflict.involvedWorkflowIds) {
+      const workflowId = workflowIdMap.get(hubspotFlowId);
+      if (workflowId) {
+        await prisma.conflictWorkflow.create({ data: { conflictId: conflictRecord.id, workflowId } });
       }
     }
+  }
 
-    // Store pipelines and stages
-    for (const pipeline of pipelines) {
-      const pipelineRecord = await tx.pipeline.upsert({
-        where: {
-          portalId_hubspotPipelineId: {
-            portalId,
-            hubspotPipelineId: pipeline.id,
-          },
-        },
-        update: {
-          label: pipeline.label,
-          objectType: pipeline.objectType,
-          displayOrder: pipeline.displayOrder,
-        },
-        create: {
-          portalId,
-          hubspotPipelineId: pipeline.id,
-          label: pipeline.label,
-          objectType: pipeline.objectType,
-          displayOrder: pipeline.displayOrder,
-        },
-      });
-
-      for (const stage of pipeline.stages) {
-        await tx.pipelineStage.upsert({
-          where: {
-            pipelineId_hubspotStageId: {
-              pipelineId: pipelineRecord.id,
-              hubspotStageId: stage.id,
-            },
-          },
-          update: {
-            label: stage.label,
-            displayOrder: stage.displayOrder,
-            metadata: stage.metadata,
-          },
-          create: {
-            pipelineId: pipelineRecord.id,
-            hubspotStageId: stage.id,
-            label: stage.label,
-            displayOrder: stage.displayOrder,
-            metadata: stage.metadata,
-          },
-        });
-      }
-    }
-
-    // Store marketing email metadata
-    for (const email of emails) {
-      await tx.marketingEmail.upsert({
-        where: {
-          portalId_hubspotEmailId: {
-            portalId,
-            hubspotEmailId: email.id,
-          },
-        },
-        update: {
-          name: email.name,
-          subject: email.subject,
-          fromName: (email as any).fromName || null,
-          fromEmail: (email as any).fromEmail || null,
-          replyTo: (email as any).replyTo || null,
-          previewText: (email as any).previewText || null,
-        },
-        create: {
-          portalId,
-          hubspotEmailId: email.id,
-          name: email.name,
-          subject: email.subject,
-          fromName: (email as any).fromName || null,
-          fromEmail: (email as any).fromEmail || null,
-          replyTo: (email as any).replyTo || null,
-          previewText: (email as any).previewText || null,
-        },
+  // Store pipelines
+  for (const pipeline of pipelines) {
+    const pipelineRecord = await prisma.pipeline.upsert({
+      where: { portalId_hubspotPipelineId: { portalId, hubspotPipelineId: pipeline.id } },
+      update: { label: pipeline.label, objectType: pipeline.objectType, displayOrder: pipeline.displayOrder },
+      create: { portalId, hubspotPipelineId: pipeline.id, label: pipeline.label, objectType: pipeline.objectType, displayOrder: pipeline.displayOrder },
+    });
+    for (const stage of pipeline.stages) {
+      await prisma.pipelineStage.upsert({
+        where: { pipelineId_hubspotStageId: { pipelineId: pipelineRecord.id, hubspotStageId: stage.id } },
+        update: { label: stage.label, displayOrder: stage.displayOrder, metadata: stage.metadata },
+        create: { pipelineId: pipelineRecord.id, hubspotStageId: stage.id, label: stage.label, displayOrder: stage.displayOrder, metadata: stage.metadata },
       });
     }
+  }
 
-    // Store list metadata
-    for (const list of lists) {
-      await tx.crmList.upsert({
-        where: {
-          portalId_hubspotListId: {
-            portalId,
-            hubspotListId: list.id,
-          },
-        },
-        update: { name: list.name },
-        create: {
-          portalId,
-          hubspotListId: list.id,
-          name: list.name,
-        },
-      });
-      }
+  // Store emails
+  for (const email of emails) {
+    await prisma.marketingEmail.upsert({
+      where: { portalId_hubspotEmailId: { portalId, hubspotEmailId: email.id } },
+      update: { name: email.name, subject: email.subject, fromName: (email as any).fromName || null, fromEmail: (email as any).fromEmail || null, replyTo: (email as any).replyTo || null, previewText: (email as any).previewText || null },
+      create: { portalId, hubspotEmailId: email.id, name: email.name, subject: email.subject, fromName: (email as any).fromName || null, fromEmail: (email as any).fromEmail || null, replyTo: (email as any).replyTo || null, previewText: (email as any).previewText || null },
+    });
+  }
+
+  // Store lists
+  for (const list of lists) {
+    await prisma.crmList.upsert({
+      where: { portalId_hubspotListId: { portalId, hubspotListId: list.id } },
+      update: { name: list.name },
+      create: { portalId, hubspotListId: list.id, name: list.name },
+    });
   }
 }
 /**
