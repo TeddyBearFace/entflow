@@ -18,6 +18,7 @@ export default function LandingPage() {
             <a href="#features" style={{ textDecoration: "none", color: "#5B6471", fontSize: 14, fontWeight: 500 }}>Features</a>
             <a href="#how-it-works" style={{ textDecoration: "none", color: "#5B6471", fontSize: 14, fontWeight: 500 }}>How It Works</a>
             <a href="#pricing" style={{ textDecoration: "none", color: "#5B6471", fontSize: 14, fontWeight: 500 }}>Pricing</a>
+            <Link href="/documentation" style={{ textDecoration: "none", color: "#5B6471", fontSize: 14, fontWeight: 500 }}>Docs</Link>
             <Link href="/connect" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: 13, background: "#FF7A59", color: "white", textDecoration: "none" }}>
               Connect HubSpot →
             </Link>

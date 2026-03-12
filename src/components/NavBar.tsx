@@ -21,6 +21,7 @@ export default function NavBar({ portalId, portalName }: NavBarProps) {
     { href: `/dashboard?portal=${pid}`, label: "Dashboard", icon: "📊", match: "/dashboard" },
     { href: `/map?portal=${pid}`, label: "Map", icon: "🗺️", match: "/map" },
     { href: `/changelog?portal=${pid}`, label: "Changelog", icon: "📋", match: "/changelog" },
+    { href: `/documentation`, label: "Docs", icon: "📖", match: "/documentation" },
   ];
 
   const fetchPortals = useCallback(async () => {
