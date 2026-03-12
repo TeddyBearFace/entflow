@@ -71,19 +71,9 @@ export default function DashboardSyncBanner({ portalId, isSyncing: serverSyncing
     router.refresh();
   }, [router, isFree]);
 
-  const handleUpgrade = useCallback(async (e?: React.MouseEvent) => {
+  const handleUpgrade = useCallback((e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ portalId }),
-      });
-      if (res.ok) {
-        const { url } = await res.json();
-        if (url) window.location.href = url;
-      }
-    } catch {}
+    window.location.href = `/pricing?portal=${portalId}`;
   }, [portalId]);
 
   if (syncing) {

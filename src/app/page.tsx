@@ -1,21 +1,11 @@
-import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 export default async function HomePage() {
-  const portal = await prisma.portal.findFirst({
-    where: {
-      OR: [
-        { syncStatus: "COMPLETED" },
-        { syncStatus: "SYNCING" },
-        { lastSyncedAt: { not: null } },
-      ],
-    },
-    orderBy: { updatedAt: "desc" },
-    select: { id: true },
-  });
+  const portalId = cookies().get("entflow_portal")?.value;
 
-  if (portal) {
-    redirect(`/dashboard?portal=${portal.id}`);
+  if (portalId) {
+    redirect(`/dashboard?portal=${portalId}`);
   }
 
   redirect("/landing");

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import DisconnectButton from "@/components/DisconnectButton";
+import PortalLoginButton from "@/components/PortalLoginButton";
 
 interface ConnectPageProps {
   searchParams: { error?: string };
@@ -35,11 +36,11 @@ export default async function ConnectPage({ searchParams }: ConnectPageProps) {
           <span className="text-lg font-bold text-gray-900">Entflow</span>
         </div>
         {existingPortals.length > 0 && (
-          <Link href={`/dashboard?portal=${existingPortals[0].id}`}
+          <PortalLoginButton portalId={existingPortals[0].id} href={`/dashboard?portal=${existingPortals[0].id}`}
             className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
             Go to dashboard
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-          </Link>
+          </PortalLoginButton>
         )}
       </header>
 
@@ -62,14 +63,14 @@ export default async function ConnectPage({ searchParams }: ConnectPageProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Link href={`/dashboard?portal=${p.id}`}
+                    <PortalLoginButton portalId={p.id} href={`/dashboard?portal=${p.id}`}
                       className="text-xs font-medium text-blue-600 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50 transition-colors">
                       Open
-                    </Link>
-                    <Link href={`/map?portal=${p.id}`}
+                    </PortalLoginButton>
+                    <PortalLoginButton portalId={p.id} href={`/map?portal=${p.id}`}
                       className="text-xs font-medium text-gray-600 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100 transition-colors">
                       Map
-                    </Link>
+                    </PortalLoginButton>
                     <DisconnectButton portalId={p.id} portalName={p.name || `Portal ${p.hubspotPortalId}`} />
                   </div>
                 </div>

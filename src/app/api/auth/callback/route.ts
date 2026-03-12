@@ -1,6 +1,6 @@
 // GET /api/auth/callback
 // HubSpot redirects here after the user grants access.
-// Exchanges the auth code for tokens, saves the portal, and triggers first sync.
+// Exchanges the auth code for tokens, saves the portal, sets session, triggers first sync.
 
 import { NextRequest, NextResponse } from "next/server";
 import { exchangeCodeForTokens, savePortalConnection } from "@/lib/hubspot";
@@ -35,15 +35,25 @@ export async function GET(request: NextRequest) {
     const portalId = await savePortalConnection(tokenResponse);
 
     // Trigger first sync (non-blocking)
-    // We don't await this - it runs in the background
     syncPortal(portalId).catch((err) =>
       console.error(`Background sync failed for portal ${portalId}:`, err)
     );
 
-    // Redirect to dashboard with success
-    return NextResponse.redirect(
+    // Redirect to dashboard with session cookie
+    const response = NextResponse.redirect(
       `${appUrl}/dashboard?portal=${portalId}&connected=true`
     );
+
+    // Set session cookie
+    response.cookies.set("entflow_portal", portalId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: "/",
+    });
+
+    return response;
   } catch (err) {
     console.error("OAuth callback error:", err);
     const message =

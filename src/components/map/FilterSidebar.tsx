@@ -540,22 +540,8 @@ export default function FilterSidebar({
 }
 
 function PropertyImpactLocked({ portalId }: { portalId: string }) {
-  const [loading, setLoading] = useState(false);
-
-  const handleUpgrade = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ portalId }),
-      });
-      if (res.ok) {
-        const { url } = await res.json();
-        if (url) window.location.href = url;
-      }
-    } catch {}
-    finally { setLoading(false); }
+  const handleUpgrade = () => {
+    window.location.href = `/pricing?portal=${portalId}`;
   };
 
   return (
@@ -594,10 +580,10 @@ function PropertyImpactLocked({ portalId }: { portalId: string }) {
           <p className="text-xs text-gray-500 leading-relaxed mb-4">
             See which workflows read and write to every property. Catch write collisions before they cause issues.
           </p>
-          <button onClick={handleUpgrade} disabled={loading}
-            className="px-4 py-2 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md disabled:opacity-50"
+          <button onClick={handleUpgrade}
+            className="px-4 py-2 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md"
             style={{ backgroundColor: "#FF7A59" }}>
-            {loading ? "Loading..." : "Upgrade from $9/mo"}
+            View Plans
           </button>
         </div>
       </div>
