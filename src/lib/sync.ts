@@ -544,10 +544,9 @@ async function storeResults(
           name: list.name,
         },
       });
-    }
-  });
+      }
+  }, { timeout: 120000 });
 }
-
 /**
  * Mark a sync as complete and update the portal's sync status.
  */
