@@ -124,7 +124,7 @@ export default async function ConnectPage({ searchParams }: ConnectPageProps) {
               <p className="text-sm text-gray-500 mb-6">
                 {existingPortals.length > 0
                   ? "Add a new HubSpot portal or reconnect an existing one with updated permissions."
-                  : "Connect your HubSpot portal and we'll map your workflows instantly. No setup required."
+                  : "Connect your HubSpot portal and we'll map your workflows instantly. No passwords — HubSpot is your login. Connect from any device."
                 }
               </p>
 
