@@ -80,6 +80,8 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
   const [smartGuides, setSmartGuides] = useState<{ guides: any[]; spacing: any[] }>({ guides: [], spacing: [] });
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncKey, setSyncKey] = useState(0);
+  const [syncCooldownMs, setSyncCooldownMs] = useState(0);
+  const lastSyncedRef = useRef<string | null>(null);
   const reactFlowInstance = useReactFlow();
   const { canUse, isFree, plan } = usePlan(portalId);
   const [filters, setFilters] = useState<MapFilters>({
@@ -483,16 +485,38 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         setIsSyncing(true);
         setSyncKey(k => k + 1);
       }
+      if (data.lastSyncedAt) {
+        lastSyncedRef.current = data.lastSyncedAt;
+        if (isFree) {
+          const elapsed = Date.now() - new Date(data.lastSyncedAt).getTime();
+          setSyncCooldownMs(Math.max(0, 2 * 60 * 60 * 1000 - elapsed));
+        }
+      }
     }).catch(() => {});
-  }, [portalId]);
+  }, [portalId, isFree]);
+
+  // Tick cooldown timer for free users
+  useEffect(() => {
+    if (!isFree || syncCooldownMs <= 0) return;
+    const timer = setInterval(() => {
+      if (!lastSyncedRef.current) { setSyncCooldownMs(0); return; }
+      const elapsed = Date.now() - new Date(lastSyncedRef.current).getTime();
+      const remaining = Math.max(0, 2 * 60 * 60 * 1000 - elapsed);
+      setSyncCooldownMs(remaining);
+      if (remaining <= 0) clearInterval(timer);
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [isFree, syncCooldownMs]);
 
   const toggleAutoSync = async () => {
     const res = await fetch("/api/auto-sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ portalId, action: "toggle" }) });
     if (res.ok) { const data = await res.json(); setAutoSync(prev => ({ ...prev, enabled: data.autoSyncEnabled })); }
   };
 
+  const syncOnCooldown = isFree && syncCooldownMs > 0;
+
   const triggerSync = useCallback(async () => {
-    if (isSyncing) return;
+    if (isSyncing || syncOnCooldown) return;
     setIsSyncing(true);
     setSyncKey(k => k + 1);
     // Fire and forget — SyncProgress component polls for updates
@@ -501,7 +525,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ portalId }),
     }).catch(err => console.error("Sync failed:", err));
-  }, [portalId, isSyncing]);
+  }, [portalId, isSyncing, syncOnCooldown]);
 
   const matchTypeIcons: Record<string, string> = { workflow_name: "📋", action: "⚡", property: "✏️", email: "📧", list: "📝", enrollment: "📥" };
 
@@ -891,7 +915,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         {/* Sync progress bar */}
         <div className="flex-shrink-0">
           {isSyncing && (
-            <SyncProgress key={syncKey} portalId={portalId} onComplete={() => { setIsSyncing(false); fetchGraph(); }} compact />
+            <SyncProgress key={syncKey} portalId={portalId} onComplete={() => { setIsSyncing(false); if (isFree) { lastSyncedRef.current = new Date().toISOString(); setSyncCooldownMs(2 * 60 * 60 * 1000); } fetchGraph(); }} compact />
           )}
         </div>
         <div className="flex-1 relative">
@@ -960,16 +984,20 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                 📋 Changelog
               </a>
               {/* Manual sync */}
-              <ProBadge allowed={canUse("manualSync")} portalId={portalId} feature="Manual sync">
-                <button onClick={triggerSync} disabled={isSyncing}
-                  className={`backdrop-blur-sm rounded-lg shadow-sm border px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${isSyncing ? "bg-blue-50 border-blue-200 text-blue-600 cursor-wait" : "bg-white/90 border-gray-200 text-gray-600 hover:text-gray-800 hover:border-gray-300"}`}>
-                  {isSyncing ? (
-                    <><div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-blue-300 border-t-blue-600" /> Syncing...</>
-                  ) : (
-                    <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sync</>
-                  )}
-                </button>
-              </ProBadge>
+              <button onClick={triggerSync} disabled={isSyncing || syncOnCooldown}
+                className={`backdrop-blur-sm rounded-lg shadow-sm border px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                  isSyncing ? "bg-blue-50 border-blue-200 text-blue-600 cursor-wait"
+                  : syncOnCooldown ? "bg-white/90 border-gray-200 text-gray-400 cursor-not-allowed"
+                  : "bg-white/90 border-gray-200 text-gray-600 hover:text-gray-800 hover:border-gray-300"
+                }`}>
+                {isSyncing ? (
+                  <><div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-blue-300 border-t-blue-600" /> Syncing...</>
+                ) : syncOnCooldown ? (
+                  <>⏳ {Math.ceil(syncCooldownMs / 60000) >= 60 ? `${Math.floor(syncCooldownMs / 3600000)}h ${Math.ceil((syncCooldownMs % 3600000) / 60000)}m` : `${Math.ceil(syncCooldownMs / 60000)}m`}</>
+                ) : (
+                  <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sync</>
+                )}
+              </button>
               {/* Auto-sync toggle */}
               <ProBadge allowed={canUse("autoSync")} portalId={portalId} feature="Auto-sync">
                 <button onClick={toggleAutoSync} className={`backdrop-blur-sm rounded-lg shadow-sm border px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${autoSync.enabled ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white/90 border-gray-200 text-gray-500 hover:text-gray-700"}`}>

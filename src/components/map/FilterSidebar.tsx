@@ -360,7 +360,6 @@ export default function FilterSidebar({
       </Section>
 
       {/* ═══════ Property Impact ═══════ */}
-      <ProGate allowed={!canUse || canUse("propertyImpact")} portalId={portalId} feature="Property impact analysis" className="flex-1 flex flex-col min-h-0">
       <div className="flex-1 flex flex-col min-h-0">
         <button onClick={() => setImpactExpanded(!impactExpanded)}
           className="flex items-center justify-between w-full px-4 py-2.5 border-b border-gray-100 hover:bg-gray-50/50 transition-colors flex-shrink-0">
@@ -369,7 +368,10 @@ export default function FilterSidebar({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
             <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Property Impact</h4>
-            {conflictCount > 0 && (
+            {canUse && !canUse("propertyImpact") && (
+              <span className="text-[8px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 py-px">⚡ Pro</span>
+            )}
+            {(!canUse || canUse("propertyImpact")) && conflictCount > 0 && (
               <span className="px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[9px] font-bold animate-pulse">{conflictCount} conflict{conflictCount > 1 ? "s" : ""}</span>
             )}
           </div>
@@ -378,7 +380,11 @@ export default function FilterSidebar({
           </svg>
         </button>
 
-        {impactExpanded && (
+        {impactExpanded && canUse && !canUse("propertyImpact") && (
+          <PropertyImpactLocked portalId={portalId} />
+        )}
+
+        {impactExpanded && (!canUse || canUse("propertyImpact")) && (
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Controls */}
             <div className="px-3 py-2 border-b border-gray-100 flex-shrink-0">
@@ -527,7 +533,72 @@ export default function FilterSidebar({
           </div>
         )}
       </div>
-      </ProGate>
+    </div>
+  );
+}
+
+function PropertyImpactLocked({ portalId }: { portalId: string }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleUpgrade = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ portalId }),
+      });
+      if (res.ok) {
+        const { url } = await res.json();
+        if (url) window.location.href = url;
+      }
+    } catch {}
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="flex-1 relative overflow-hidden">
+      {/* Blurred fake property rows */}
+      <div className="px-3 py-2 border-b border-gray-100" style={{ filter: "blur(3px)", opacity: 0.4 }}>
+        <div className="flex items-center gap-1 flex-wrap mb-2">
+          {["All", "👤", "💰", "🏢", "🎫"].map((l, i) => (
+            <span key={i} className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-gray-100 text-gray-400">{l}</span>
+          ))}
+        </div>
+      </div>
+      <div style={{ filter: "blur(3px)", opacity: 0.35 }}>
+        {["👤 CONTACT", "💰 DEAL"].map(group => (
+          <div key={group}>
+            <div className="px-3 py-1.5 bg-gray-50">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{group}</span>
+            </div>
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="px-3 py-2 border-b border-gray-50 flex items-center gap-2">
+                <div className="h-3 rounded bg-gray-200" style={{ width: `${50 + i * 15}%` }} />
+                <span className="text-[9px] px-1 py-0.5 rounded bg-gray-100 text-gray-400">{i}W</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Upgrade overlay */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-[1px] px-6">
+        <div className="text-center">
+          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3">
+            <span className="text-lg">🎯</span>
+          </div>
+          <p className="text-sm font-bold text-gray-900 mb-1">Property Impact Analysis</p>
+          <p className="text-xs text-gray-500 leading-relaxed mb-4">
+            See which workflows read and write to every property. Catch write collisions before they cause issues.
+          </p>
+          <button onClick={handleUpgrade} disabled={loading}
+            className="px-4 py-2 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md disabled:opacity-50"
+            style={{ backgroundColor: "#FF7A59" }}>
+            {loading ? "Loading..." : "Upgrade to Pro — $29/mo"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

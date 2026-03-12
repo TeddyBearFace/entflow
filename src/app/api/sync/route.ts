@@ -45,6 +45,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Enforce 2-hour cooldown for free tier
+    if (portal.planTier === "FREE" && portal.lastSyncedAt) {
+      const elapsedMs = Date.now() - new Date(portal.lastSyncedAt).getTime();
+      const cooldownMs = 2 * 60 * 60 * 1000; // 2 hours
+      if (elapsedMs < cooldownMs) {
+        const remainingMin = Math.ceil((cooldownMs - elapsedMs) / 60000);
+        return NextResponse.json(
+          { error: `Free plan: sync available in ${remainingMin} minutes. Upgrade to Pro for unlimited syncs.` },
+          { status: 429 }
+        );
+      }
+    }
+
     // Mark as syncing immediately so UI picks it up
     await prisma.portal.update({ where: { id: portalId }, data: { syncStatus: "SYNCING", syncMessage: "Starting sync..." } });
 

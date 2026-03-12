@@ -101,7 +101,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     take: 5,
   });
 
-  const isSyncing = false; // Only sync manually or on first connect
+  const isSyncing = portal.syncStatus === "SYNCING";
   const justConnected = searchParams.connected === "true";
 
   return (
@@ -111,7 +111,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       <main className="max-w-6xl mx-auto px-6 py-8">
         {/* Sync progress */}
-        <DashboardSyncBanner portalId={portalId} isSyncing={isSyncing} justConnected={justConnected} syncStatus={portal.syncStatus} syncMessage={portal.syncMessage} />
+        <DashboardSyncBanner portalId={portalId} isSyncing={isSyncing} justConnected={justConnected} syncStatus={portal.syncStatus} syncMessage={portal.syncMessage} planTier={portal.planTier} lastSyncedAt={portal.lastSyncedAt?.toISOString() || null} />
 
         {/* Upgrade banner for free users */}
         {portal.planTier === "FREE" && totalWorkflows > 0 && (
