@@ -230,6 +230,8 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
       error instanceof Error ? error.message : "Unknown error";
     console.error(`[Sync ${portalId}] Failed:`, errorMessage);
 
+    const isAuthFailure = errorMessage.includes("HUBSPOT_AUTH_FAILED");
+
     // Mark sync as failed
     await prisma.syncLog.update({
       where: { id: syncLog.id },
@@ -242,7 +244,12 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
 
     await prisma.portal.update({
       where: { id: portalId },
-      data: { syncStatus: "FAILED", syncMessage: `Sync failed: ${errorMessage}` },
+      data: {
+        syncStatus: "FAILED",
+        syncMessage: isAuthFailure
+          ? "HubSpot disconnected — please reconnect your portal"
+          : `Sync failed: ${errorMessage}`,
+      },
     });
 
     return {

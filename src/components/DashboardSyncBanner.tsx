@@ -1,17 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import SyncProgress from "@/components/SyncProgress";
 
-export default function DashboardSyncBanner({ portalId, isSyncing: serverSyncing, justConnected }: {
+export default function DashboardSyncBanner({ portalId, isSyncing: serverSyncing, justConnected, syncStatus, syncMessage }: {
   portalId: string;
   isSyncing: boolean;
   justConnected: boolean;
+  syncStatus?: string;
+  syncMessage?: string | null;
 }) {
   const router = useRouter();
   const [syncing, setSyncing] = useState(serverSyncing || justConnected);
   const [syncKey, setSyncKey] = useState(0);
+
+  const isDisconnected = syncStatus === "FAILED" && syncMessage?.includes("disconnected");
+  const isFailed = syncStatus === "FAILED" && !isDisconnected;
 
   const triggerSync = useCallback(async () => {
     setSyncing(true);
@@ -22,7 +28,6 @@ export default function DashboardSyncBanner({ portalId, isSyncing: serverSyncing
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ portalId }),
       });
-      // Non-blocking — SyncProgress polls for progress
     } catch (err) {
       console.error("Sync trigger failed:", err);
     }
@@ -33,6 +38,7 @@ export default function DashboardSyncBanner({ portalId, isSyncing: serverSyncing
     router.refresh();
   }, [router]);
 
+  // Actively syncing
   if (syncing) {
     return (
       <div className="mb-6">
@@ -41,6 +47,46 @@ export default function DashboardSyncBanner({ portalId, isSyncing: serverSyncing
     );
   }
 
+  // HubSpot disconnected
+  if (isDisconnected) {
+    return (
+      <div className="mb-6 px-5 py-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🔌</span>
+          <div>
+            <p className="text-sm font-bold text-red-900">HubSpot Disconnected</p>
+            <p className="text-xs text-red-700 mt-0.5">Your HubSpot app has been disconnected. Reconnect to resume syncing.</p>
+          </div>
+        </div>
+        <Link href="/api/auth/hubspot"
+          className="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-semibold text-white hover:shadow-md transition-all"
+          style={{ backgroundColor: "#FF7A59" }}>
+          Reconnect HubSpot
+        </Link>
+      </div>
+    );
+  }
+
+  // Sync failed (non-auth)
+  if (isFailed) {
+    return (
+      <div className="mb-6 px-5 py-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">⚠️</span>
+          <div>
+            <p className="text-sm font-bold text-amber-900">Last sync failed</p>
+            <p className="text-xs text-amber-700 mt-0.5 max-w-md truncate">{syncMessage || "Unknown error"}</p>
+          </div>
+        </div>
+        <button onClick={triggerSync}
+          className="flex-shrink-0 text-sm font-medium text-amber-700 hover:text-amber-800 px-3 py-1.5 rounded-md hover:bg-amber-100 transition-colors">
+          Retry Sync
+        </button>
+      </div>
+    );
+  }
+
+  // Normal — show sync button
   return (
     <div className="mb-6 flex items-center justify-between px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
       <div className="flex items-center gap-3">

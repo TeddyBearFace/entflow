@@ -341,6 +341,9 @@ async function hubspotFetch(
 
     if (!response.ok) {
       const errorBody = await response.text();
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`HUBSPOT_AUTH_FAILED: ${response.status} - ${errorBody}`);
+      }
       throw new Error(
         `HubSpot API error ${response.status}: ${errorBody}`
       );

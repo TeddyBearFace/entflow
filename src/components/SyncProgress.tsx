@@ -28,6 +28,7 @@ export default function SyncProgress({ portalId, onComplete, compact = false }: 
   const [phase, setPhase] = useState<"WAITING" | "ACTIVE" | "DONE">("WAITING");
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const firedComplete = useRef(false);
+  const activeStartRef = useRef<number>(0);
 
   const poll = useCallback(async () => {
     try {
@@ -37,16 +38,17 @@ export default function SyncProgress({ portalId, onComplete, compact = false }: 
       setStatus(data);
 
       if (data.status === "SYNCING") {
-        setPhase("ACTIVE");
-      } else if (data.status === "COMPLETED" || data.status === "FAILED") {
         setPhase(prev => {
-          // Only transition to DONE if we were ACTIVE (saw SYNCING)
-          if (prev === "ACTIVE") {
-            return "DONE";
-          }
-          // If still WAITING, keep waiting — sync hasn't started yet
-          return prev;
+          if (prev === "WAITING") activeStartRef.current = Date.now();
+          return "ACTIVE";
         });
+        // If stuck syncing for over 3 minutes, treat as failed
+        if (activeStartRef.current > 0 && Date.now() - activeStartRef.current > 180000) {
+          setPhase("DONE");
+        }
+      } else if (data.status === "COMPLETED" || data.status === "FAILED") {
+        // Transition to DONE from either WAITING or ACTIVE
+        setPhase("DONE");
       }
     } catch {
       // Silent fail

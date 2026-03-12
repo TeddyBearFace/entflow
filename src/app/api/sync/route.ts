@@ -28,12 +28,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Don't allow concurrent syncs
+    // Don't allow concurrent syncs (but unstick stale ones after 5 min)
     if (portal.syncStatus === "SYNCING") {
-      return NextResponse.json(
-        { error: "Sync already in progress" },
-        { status: 409 }
-      );
+      const staleMinutes = (Date.now() - new Date(portal.updatedAt).getTime()) / 60000;
+      if (staleMinutes < 5) {
+        return NextResponse.json(
+          { error: "Sync already in progress" },
+          { status: 409 }
+        );
+      }
+      // Stale sync — reset and allow new one
+      console.log(`[Sync] Portal ${portalId} stuck in SYNCING for ${Math.round(staleMinutes)}min, resetting`);
+      await prisma.portal.update({
+        where: { id: portalId },
+        data: { syncStatus: "FAILED", syncMessage: "Previous sync timed out" },
+      });
     }
 
     // Trigger sync (non-blocking - return immediately, let client poll for progress)
