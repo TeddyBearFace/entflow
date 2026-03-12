@@ -68,7 +68,9 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
     console.log(`[Sync ${portalId}] Verifying HubSpot connection...`);
     await updateSyncProgress(portalId, 0, 0, "Verifying HubSpot connection...");
     try {
-      await getValidAccessToken(portalId);
+      const testToken = await getValidAccessToken(portalId);
+      const testRes = await fetch("https://api.hubapi.com/oauth/v1/access-tokens/" + testToken);
+      if (!testRes.ok) throw new Error(`HubSpot returned ${testRes.status}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
       console.error(`[Sync ${portalId}] HubSpot connection invalid:`, msg);
