@@ -5,7 +5,7 @@ const PUBLIC_ROUTES = [
   "/landing",
   "/connect",
   "/documentation",
-  "/api/",  // All API routes handle their own auth
+  "/api",  // All API routes handle their own auth
 ];
 
 export function middleware(request: NextRequest) {
