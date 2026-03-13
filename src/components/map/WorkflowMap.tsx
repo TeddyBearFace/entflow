@@ -80,6 +80,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
   const [smartGuides, setSmartGuides] = useState<{ guides: any[]; spacing: any[] }>({ guides: [], spacing: [] });
   const reactFlowInstance = useReactFlow();
   const { canUse, isFree, plan } = usePlan(portalId);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [filters, setFilters] = useState<MapFilters>({
     status: [],
     objectTypes: [],
@@ -930,33 +931,50 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
 
           {/* Top right: Nav toolbar */}
           <Panel position="top-right">
-            <div className="flex items-center gap-2">
-              {/* Search */}
-              <button onClick={() => setSearchOpen(true)} className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                Search...
+            <div className="flex items-center gap-1.5">
+              {/* Search - always visible */}
+              <button onClick={() => setSearchOpen(true)} className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <span className="hidden sm:inline">Search</span>
               </button>
-              {/* Changelog */}
-              <a href={`/changelog?portal=${portalId}`} className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:border-gray-300 transition-colors flex items-center gap-1.5">
-                📋 Changelog
-              </a>
-              {/* AI Analyst */}
-              <a href={`/analyst?portal=${portalId}`} className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:text-violet-700 hover:border-violet-300 transition-colors flex items-center gap-1.5">
-                🔬 AI Analyst
-              </a>
-              {/* Auto-sync toggle */}
-              <ProBadge allowed={canUse("autoSync")} portalId={portalId} feature="Auto-sync">
-                <button onClick={toggleAutoSync} className={`backdrop-blur-sm rounded-lg shadow-sm border px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${autoSync.enabled ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white/90 border-gray-200 text-gray-500 hover:text-gray-700"}`}>
-                  {autoSync.enabled ? "🔄 Auto-sync on" : "⏸️ Auto-sync off"}
-                </button>
-              </ProBadge>
-              {/* Stats */}
-              <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-3 py-2 text-xs text-gray-500">
-                {nodes.filter((n) => n.type === "expandedWorkflow").length} workflows · {edges.length} deps
+              {/* Stats - always visible */}
+              <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-2.5 py-1.5 text-[10px] text-gray-500 tabular-nums">
+                {nodes.filter((n) => n.type === "expandedWorkflow").length}W · {edges.length}D
               </div>
-              <ProBadge allowed={canUse("export")} portalId={portalId} feature="Export">
-                <ExportPanel portalId={portalId} portalName={portalName} canUseAdvancedExport={canUse("exportAdvanced")} />
-              </ProBadge>
+              {/* Hamburger menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen(p => !p)}
+                  className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-2 py-1.5 text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+                    <div className="absolute top-full right-0 mt-1 w-52 bg-white rounded-xl shadow-lg border border-gray-200 py-1.5 z-40">
+                      <a href={`/changelog?portal=${portalId}`} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors">
+                        📋 Changelog
+                      </a>
+                      <a href={`/analyst?portal=${portalId}`} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-violet-50 hover:text-violet-700 flex items-center gap-2 transition-colors">
+                        🔬 AI Analyst
+                      </a>
+                      <div className="border-t border-gray-100 my-1" />
+                      <ProBadge allowed={canUse("autoSync")} portalId={portalId} feature="Auto-sync">
+                        <button onClick={() => { toggleAutoSync(); setMenuOpen(false); }} className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${autoSync.enabled ? "text-emerald-700" : "text-gray-700 hover:bg-gray-50"}`}>
+                          {autoSync.enabled ? "🔄 Auto-sync on" : "⏸️ Auto-sync off"}
+                        </button>
+                      </ProBadge>
+                      <div className="border-t border-gray-100 my-1" />
+                      <div className="px-3 py-1.5">
+                        <ProBadge allowed={canUse("export")} portalId={portalId} feature="Export">
+                          <ExportPanel portalId={portalId} portalName={portalName} canUseAdvancedExport={canUse("exportAdvanced")} />
+                        </ProBadge>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </Panel>
 

@@ -281,55 +281,26 @@ export default function SyncBar({
 
   // ── Idle ────────────────────────────────────────────────────
   return (
-    <div className={`flex items-center gap-3 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl ${compact ? "" : ""}`}>
-      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className={`flex items-center gap-2 ${compact ? "px-3 py-1.5" : "px-4 py-2.5"} bg-gray-50 border border-gray-200 rounded-xl`}>
+      <svg className={`${compact ? "w-3 h-3" : "w-4 h-4"} text-gray-400 flex-shrink-0`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
       </svg>
-      <div className="flex-1 min-w-0">
-        {onCooldown ? (
-          <>
-            <span className={`text-gray-600 ${compact ? "text-xs" : "text-sm"}`}>
-              Next sync in <span className="font-semibold text-gray-800">{formatCountdown(cooldownMs)}</span>
-            </span>
-            {!compact && (
-              <p className="text-[10px] text-gray-400 mt-0.5">
-                Free plan: 2h cooldown.{" "}
-                <Link href={`/pricing?portal=${portalId}`} className="text-blue-500 hover:text-blue-600 font-medium">
-                  Upgrade for unlimited
-                </Link>
-              </p>
-            )}
-          </>
-        ) : (
-          <>
-            <span className={`text-gray-600 ${compact ? "text-xs" : "text-sm"}`}>
-              {lastSynced
-                ? <>Last synced <span className="font-medium text-gray-800">{timeAgo(lastSynced)}</span></>
-                : "Ready to sync"
-              }
-            </span>
-            {!compact && isFree && (
-              <p className="text-[10px] text-gray-400 mt-0.5">
-                Free plan: sync every 2h.{" "}
-                <Link href={`/pricing?portal=${portalId}`} className="text-blue-500 hover:text-blue-600 font-medium">
-                  Upgrade to Pro
-                </Link>{" "}
-                for unlimited.
-              </p>
-            )}
-          </>
-        )}
-      </div>
+      <span className={`flex-1 ${compact ? "text-[10px]" : "text-sm"} text-gray-500 truncate`}>
+        {onCooldown
+          ? <>Sync in {formatCountdown(cooldownMs)}</>
+          : lastSynced
+            ? <>Synced {timeAgo(lastSynced)}</>
+            : "Ready to sync"
+        }
+      </span>
       <button
         onClick={triggerSync}
         disabled={onCooldown}
-        className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-          onCooldown
-            ? "text-gray-400 cursor-not-allowed"
-            : "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-        }`}
+        className={`flex-shrink-0 font-semibold rounded-md transition-colors ${
+          compact ? "text-[10px] px-2 py-0.5" : "text-xs px-3 py-1.5"
+        } ${onCooldown ? "text-gray-400 cursor-not-allowed" : "text-blue-600 hover:text-blue-700 hover:bg-blue-50"}`}
       >
-        {onCooldown ? `⏳ ${formatCountdown(cooldownMs)}` : "Sync Now"}
+        {onCooldown ? `⏳` : "Sync"}
       </button>
     </div>
   );

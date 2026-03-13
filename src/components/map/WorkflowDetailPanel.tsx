@@ -1,5 +1,7 @@
-"use client";
 import { useEffect, useState } from "react";
+import { scoreWorkflow, type LocalScore } from "@/lib/local-scorer";
+import { usePlan } from "@/hooks/usePlan";
+import type { AnalysisResult } from "@/lib/analyst-types";
 
 // Types
 interface WorkflowDetail {
@@ -18,27 +20,27 @@ interface WorkflowDetailPanelProps { portalId: string; workflowId: string; onClo
 
 // Config
 const ATM: Record<string, { icon: string; label: string; bg: string; text: string; border: string }> = {
-  "0-1": { icon:"⏱️", label:"Delay", bg:"#F9FAFB", text:"#4B5563", border:"#E5E7EB" },
-  "0-2": { icon:"🔀", label:"If/then branch", bg:"#FFFBEB", text:"#B45309", border:"#FDE68A" },
-  "0-3": { icon:"📌", label:"Create task", bg:"#ECFDF5", text:"#047857", border:"#A7F3D0" },
-  "0-4": { icon:"📧", label:"Send email", bg:"#FAF5FF", text:"#7C3AED", border:"#DDD6FE" },
-  "0-5": { icon:"✏️", label:"Set property", bg:"#EFF6FF", text:"#1D4ED8", border:"#BFDBFE" },
-  "0-6": { icon:"📋", label:"Copy property", bg:"#EFF6FF", text:"#1D4ED8", border:"#BFDBFE" },
-  "0-7": { icon:"🔔", label:"Send notification", bg:"#FEFCE8", text:"#A16207", border:"#FEF08A" },
-  "0-8": { icon:"🔔", label:"In-app notification", bg:"#FEFCE8", text:"#A16207", border:"#FEF08A" },
-  "0-9": { icon:"➡️", label:"Enroll in workflow", bg:"#FFF7ED", text:"#C2410C", border:"#FED7AA" },
-  "0-10":{ icon:"🔗", label:"Webhook", bg:"#EEF2FF", text:"#4338CA", border:"#C7D2FE" },
-  "0-11":{ icon:"📝", label:"Add to list", bg:"#ECFDF5", text:"#047857", border:"#A7F3D0" },
-  "0-12":{ icon:"📝", label:"Remove from list", bg:"#F9FAFB", text:"#4B5563", border:"#E5E7EB" },
-  "0-13":{ icon:"💰", label:"Create deal", bg:"#ECFDF5", text:"#047857", border:"#A7F3D0" },
-  "0-14":{ icon:"🗑️", label:"Clear property", bg:"#F9FAFB", text:"#4B5563", border:"#E5E7EB" },
-  "0-15":{ icon:"🔄", label:"Rotate owner", bg:"#EFF6FF", text:"#1D4ED8", border:"#BFDBFE" },
-  "0-16":{ icon:"🎫", label:"Create ticket", bg:"#ECFDF5", text:"#047857", border:"#A7F3D0" },
-  "0-17":{ icon:"🔀", label:"Branch", bg:"#FFFBEB", text:"#B45309", border:"#FDE68A" },
-  "0-18":{ icon:"🏢", label:"Create company", bg:"#ECFDF5", text:"#047857", border:"#A7F3D0" },
-  "0-19":{ icon:"💻", label:"Custom code", bg:"#EEF2FF", text:"#4338CA", border:"#C7D2FE" },
-  "0-20":{ icon:"⏹️", label:"Unenroll from workflow", bg:"#FFF7ED", text:"#C2410C", border:"#FED7AA" },
-  "0-35":{ icon:"🔧", label:"Format data", bg:"#F9FAFB", text:"#4B5563", border:"#E5E7EB" },
+  "0-1": { icon:"\u23f1\ufe0f", label:"Delay", bg:"#F9FAFB", text:"#4B5563", border:"#E5E7EB" },
+  "0-2": { icon:"\ud83d\udd00", label:"If/then branch", bg:"#FFFBEB", text:"#B45309", border:"#FDE68A" },
+  "0-3": { icon:"\ud83d\udccc", label:"Create task", bg:"#ECFDF5", text:"#047857", border:"#A7F3D0" },
+  "0-4": { icon:"\ud83d\udce7", label:"Send email", bg:"#FAF5FF", text:"#7C3AED", border:"#DDD6FE" },
+  "0-5": { icon:"\u270f\ufe0f", label:"Set property", bg:"#EFF6FF", text:"#1D4ED8", border:"#BFDBFE" },
+  "0-6": { icon:"\ud83d\udccb", label:"Copy property", bg:"#EFF6FF", text:"#1D4ED8", border:"#BFDBFE" },
+  "0-7": { icon:"\ud83d\udd14", label:"Send notification", bg:"#FEFCE8", text:"#A16207", border:"#FEF08A" },
+  "0-8": { icon:"\ud83d\udd14", label:"In-app notification", bg:"#FEFCE8", text:"#A16207", border:"#FEF08A" },
+  "0-9": { icon:"\u27a1\ufe0f", label:"Enroll in workflow", bg:"#FFF7ED", text:"#C2410C", border:"#FED7AA" },
+  "0-10":{ icon:"\ud83d\udd17", label:"Webhook", bg:"#EEF2FF", text:"#4338CA", border:"#C7D2FE" },
+  "0-11":{ icon:"\ud83d\udcdd", label:"Add to list", bg:"#ECFDF5", text:"#047857", border:"#A7F3D0" },
+  "0-12":{ icon:"\ud83d\udcdd", label:"Remove from list", bg:"#F9FAFB", text:"#4B5563", border:"#E5E7EB" },
+  "0-13":{ icon:"\ud83d\udcb0", label:"Create deal", bg:"#ECFDF5", text:"#047857", border:"#A7F3D0" },
+  "0-14":{ icon:"\ud83d\uddd1\ufe0f", label:"Clear property", bg:"#F9FAFB", text:"#4B5563", border:"#E5E7EB" },
+  "0-15":{ icon:"\ud83d\udd04", label:"Rotate owner", bg:"#EFF6FF", text:"#1D4ED8", border:"#BFDBFE" },
+  "0-16":{ icon:"\ud83c\udfab", label:"Create ticket", bg:"#ECFDF5", text:"#047857", border:"#A7F3D0" },
+  "0-17":{ icon:"\ud83d\udd00", label:"Branch", bg:"#FFFBEB", text:"#B45309", border:"#FDE68A" },
+  "0-18":{ icon:"\ud83c\udfe2", label:"Create company", bg:"#ECFDF5", text:"#047857", border:"#A7F3D0" },
+  "0-19":{ icon:"\ud83d\udcbb", label:"Custom code", bg:"#EEF2FF", text:"#4338CA", border:"#C7D2FE" },
+  "0-20":{ icon:"\u2139\ufe0f", label:"Unenroll from workflow", bg:"#FFF7ED", text:"#C2410C", border:"#FED7AA" },
+  "0-35":{ icon:"\ud83d\udce7", label:"Format data", bg:"#F9FAFB", text:"#4B5563", border:"#E5E7EB" },
 };
 const OTC: Record<string, string> = { CONTACT:"#2E75B6", COMPANY:"#8E44AD", DEAL:"#27AE60", TICKET:"#E67E22", CUSTOM:"#95A5A6", UNKNOWN:"#95A5A6" };
 const SS: Record<string, string> = { CRITICAL:"bg-red-100 text-red-800", WARNING:"bg-amber-100 text-amber-800", INFO:"bg-blue-100 text-blue-700" };
@@ -64,7 +66,6 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
   while (cur && am.has(cur) && !vis.has(cur)) { vis.add(cur); ord.push(am.get(cur)!); cur = am.get(cur)!.connection?.nextActionId; }
   for (const a of raw) { if (a.actionId && !vis.has(a.actionId)) ord.push(a); }
 
-  // Build lookup from fetched_object IDs to object types
   const OBJ_TYPE_NAMES: Record<string, string> = {
     "0-1":"Contact","0-2":"Company","0-3":"Deal","0-5":"Ticket",
     "0-4":"Engagement","0-6":"Product","0-7":"Task","0-8":"Line Item",
@@ -82,11 +83,9 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
     "line_item":"Line Item","product":"Product","quote":"Quote",
   };
   const fetchedObjTypes = new Map<string, string>();
-  // Primary source: dataSources array from HubSpot workflow definition
   if (dataSources && Array.isArray(dataSources)) {
     for (const ds of dataSources) {
       if (ds.name && ds.objectTypeId) {
-        // ds.name is like "fetched_object_1426533619", extract the ID
         const idMatch = ds.name.match(/fetched_object_(\w+)/);
         const key = idMatch ? idMatch[1] : ds.name;
         let objName = OBJ_TYPE_NAMES[ds.objectTypeId];
@@ -98,7 +97,6 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
       }
     }
   }
-  // Fallback: scan actions for targetObject fields
   for (const a of raw) {
     if (!a?.actionId) continue;
     const af = a.fields || {};
@@ -108,7 +106,7 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
       if (!objName) {
         const s = String(to);
         if (/^2-\d+$/.test(s)) objName = "Custom Object";
-        else if (s === "SINGLE_CONNECTION" || s === "BRANCH") continue; // Skip non-object-type values
+        else if (s === "SINGLE_CONNECTION" || s === "BRANCH") continue;
         else objName = s.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
       }
       fetchedObjTypes.set(String(a.actionId), objName);
@@ -118,20 +116,19 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
 
   return ord.map((action, idx) => {
     const atid = action.actionTypeId || ""; const f = action.fields || {};
-    const m = ATM[atid]; let icon = m?.icon||"⚙️", label = m?.label||"Action", bg = m?.bg||"#F9FAFB", text = m?.text||"#4B5563", border = m?.border||"#E5E7EB";
+    const m = ATM[atid]; let icon = m?.icon||"\u2699\ufe0f", label = m?.label||"Action", bg = m?.bg||"#F9FAFB", text = m?.text||"#4B5563", border = m?.border||"#E5E7EB";
     if (!m) {
-      if (f.listId||f.list_id||f.staticListId) { icon="📝"; label="Add to list"; bg="#ECFDF5"; text="#047857"; border="#A7F3D0"; }
-      else if (f.content_id && f.content_id!=="0") { icon="📧"; label="Send email"; bg="#FAF5FF"; text="#7C3AED"; border="#DDD6FE"; }
-      else if (f.property_name) { icon="✏️"; label="Set property"; bg="#EFF6FF"; text="#1D4ED8"; border="#BFDBFE"; }
-      else if (f.flow_id) { icon="➡️"; label="Enroll in workflow"; bg="#FFF7ED"; text="#C2410C"; border="#FED7AA"; }
-      else if (f.associations) { icon="🔗"; label="Set association"; bg="#EFF6FF"; text="#1D4ED8"; border="#BFDBFE"; }
-      else if (f.targetObject) { icon="🔍"; label="Fetch data"; bg="#EEF2FF"; text="#4338CA"; border="#C7D2FE"; }
+      if (f.listId||f.list_id||f.staticListId) { icon="\ud83d\udcdd"; label="Add to list"; bg="#ECFDF5"; text="#047857"; border="#A7F3D0"; }
+      else if (f.content_id && f.content_id!=="0") { icon="\ud83d\udce7"; label="Send email"; bg="#FAF5FF"; text="#7C3AED"; border="#DDD6FE"; }
+      else if (f.property_name) { icon="\u270f\ufe0f"; label="Set property"; bg="#EFF6FF"; text="#1D4ED8"; border="#BFDBFE"; }
+      else if (f.flow_id) { icon="\u27a1\ufe0f"; label="Enroll in workflow"; bg="#FFF7ED"; text="#C2410C"; border="#FED7AA"; }
+      else if (f.associations) { icon="\ud83d\udd17"; label="Set association"; bg="#EFF6FF"; text="#1D4ED8"; border="#BFDBFE"; }
+      else if (f.targetObject) { icon="\ud83d\udcdd"; label="Fetch data"; bg="#EEF2FF"; text="#4338CA"; border="#C7D2FE"; }
     }
     let summary = label;
     const d: Array<{ label: string; value: string; section?: string }> = [];
     const hk = new Set<string>();
 
-    // Translate HubSpot template variables to readable descriptions
     function tv(val: string): string {
       const templates: Record<string, string> = {
         "{{ enrolled_object }}": "Enrolled record",
@@ -146,98 +143,57 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
         "{{ enrolled_object.lifecyclestage }}": "Lifecycle stage",
         "{{ enrolled_object.hs_lead_status }}": "Lead status",
       };
-      // Exact match
       if (templates[val.trim()]) return templates[val.trim()];
-
-      // Fetched objects: {{ fetched_objects.fetched_object_1426533619.name }} → "Fetched: Company Name"
       const fetchedMatch = val.match(/\{\{\s*fetched_objects\.fetched_object_(\w+)\.(\w+)\s*\}\}/);
-      if (fetchedMatch) {
-        const objType = fetchedObjTypes.get(fetchedMatch[1]) || "Object";
-        return `${objType} ${fp(fetchedMatch[2])}`;
-      }
+      if (fetchedMatch) { const objType = fetchedObjTypes.get(fetchedMatch[1]) || "Object"; return `${objType} ${fp(fetchedMatch[2])}`; }
       const fetchedGeneric = val.match(/\{\{\s*fetched_objects\.[\w]+\.(\w+)\s*\}\}/);
-      if (fetchedGeneric) {
-        return `${fp(fetchedGeneric[1])}`;
-      }
-      // Fetched with deeper path: {{ fetched_objects.fetched_object_123.associations.contact.email }}
+      if (fetchedGeneric) return `${fp(fetchedGeneric[1])}`;
       const fetchedDeep = val.match(/\{\{\s*fetched_objects\.[^}]+\.(\w+)\s*\}\}/);
-      if (fetchedDeep) {
-        return `${fp(fetchedDeep[1])}`;
-      }
-      // Generic fetched_objects fallback
+      if (fetchedDeep) return `${fp(fetchedDeep[1])}`;
       if (/\{\{\s*fetched_objects\./.test(val)) return "Associated object value";
-
-      // Enrolled object property
-      if (/^\{\{\s*enrolled_object\./.test(val)) {
-        const prop = val.match(/enrolled_object\.(\w+)/)?.[1];
-        return prop ? `Record ${fp(prop)}` : "Record property";
-      }
-
-      // Contact/deal/company/ticket tokens: {{ contact.email }}, {{ deal.dealname }}
+      if (/^\{\{\s*enrolled_object\./.test(val)) { const prop = val.match(/enrolled_object\.(\w+)/)?.[1]; return prop ? `Record ${fp(prop)}` : "Record property"; }
       const objectPropMatch = val.match(/\{\{\s*(contact|deal|company|ticket|owner)\.(\w+)\s*\}\}/);
-      if (objectPropMatch) {
-        const obj = objectPropMatch[1].charAt(0).toUpperCase() + objectPropMatch[1].slice(1);
-        return `${obj} ${fp(objectPropMatch[2])}`;
-      }
-
-      // Cleanup any remaining template vars
-      if (/^\{\{.*\}\}$/.test(val.trim())) {
-        // Strip braces and clean up
-        const inner = val.replace(/\{\{|\}\}/g, "").trim();
-        // Remove long object IDs like fetched_object_1426533619
-        const cleaned = inner.replace(/fetched_objects?\.\w+\./g, "").replace(/enrolled_object\./g, "");
-        return cleaned ? `Dynamic: ${fp(cleaned)}` : "Dynamic value";
-      }
+      if (objectPropMatch) { const obj = objectPropMatch[1].charAt(0).toUpperCase() + objectPropMatch[1].slice(1); return `${obj} ${fp(objectPropMatch[2])}`; }
+      if (/^\{\{.*\}\}$/.test(val.trim())) { const inner = val.replace(/\{\{|\}\}/g, "").trim(); const cleaned = inner.replace(/fetched_objects?\.\w+\./g, "").replace(/enrolled_object\./g, ""); return cleaned ? `Dynamic: ${fp(cleaned)}` : "Dynamic value"; }
       return val;
     }
-
     function isTemplateVar(val: string): boolean { return /\{\{.*\}\}/.test(val); }
-
     function af(k: string, l: string, s?: string) {
       const v = f[k]; hk.add(k);
       if (!v || v==="" || v==="0") return;
-      if (typeof v==="string") {
-        const translated = isTemplateVar(v) ? tv(v) : v;
-        d.push({label:l, value:translated, section:s});
-      } else if (typeof v==="number"||typeof v==="boolean") {
-        d.push({label:l, value:String(v), section:s});
-      } else if (v?.staticValue!==undefined) {
-        const sv = String(v.staticValue);
-        d.push({label:l, value:isTemplateVar(sv)?tv(sv):sv, section:s});
-      }
+      if (typeof v==="string") { const translated = isTemplateVar(v) ? tv(v) : v; d.push({label:l, value:translated, section:s}); }
+      else if (typeof v==="number"||typeof v==="boolean") { d.push({label:l, value:String(v), section:s}); }
+      else if (v?.staticValue!==undefined) { const sv = String(v.staticValue); d.push({label:l, value:isTemplateVar(sv)?tv(sv):sv, section:s}); }
     }
 
     switch (atid) {
-      case "0-5": case "0-14": { // Set / Clear property
+      case "0-5": case "0-14": {
         const pn = f.property_name||f.propertyName; hk.add("property_name"); hk.add("propertyName"); hk.add("value");
         if (pn) { const dn = fp(pn); let rv2=""; const v=f.value; if (v?.staticValue) rv2=String(v.staticValue); else if (typeof v==="string") rv2=v;
-          const isTV = isTemplateVar(rv2);
-          const res = isTV ? tv(rv2) : rv2 ? rv(rv2,pn,sl,sol,pl) : "";
-          summary=res?`${dn} → ${res}`:dn;
+          const isTV = isTemplateVar(rv2); const res = isTV ? tv(rv2) : rv2 ? rv(rv2,pn,sl,sol,pl) : "";
+          summary=res?`${dn} \u2192 ${res}`:dn;
           d.push({label:"Property",value:dn,section:"Configuration"}); if(res) d.push({label:"New value",value:res,section:"Configuration"});
           if(rv2&&rv2!==res) d.push({label:"Raw value",value:rv2,section:"Technical"}); d.push({label:"Internal name",value:pn,section:"Technical"});
         } break;
       }
-      case "0-6": { // Copy property
+      case "0-6": {
         const s2=f.source_property, t2=f.target_property||f.property_name; hk.add("source_property"); hk.add("target_property"); hk.add("property_name");
-        summary=s2&&t2?`${fp(s2)} → ${fp(t2)}`:label;
+        summary=s2&&t2?`${fp(s2)} \u2192 ${fp(t2)}`:label;
         if(s2) { d.push({label:"Source property",value:fp(s2),section:"Configuration"}); d.push({label:"Source (internal)",value:s2,section:"Technical"}); }
         if(t2) { d.push({label:"Target property",value:fp(t2),section:"Configuration"}); d.push({label:"Target (internal)",value:t2,section:"Technical"}); }
         break;
       }
-      case "0-4": { // Send email
+      case "0-4": {
         const cid=f.content_id||f.contentId; hk.add("content_id"); hk.add("contentId");
         if(cid&&cid!=="0") { const ei=el[String(cid)]; summary=ei?.name||`Email #${cid}`;
           if(ei?.name) d.push({label:"Email name",value:ei.name,section:"Email Details"});
           if(ei?.subject) d.push({label:"Subject line",value:ei.subject,section:"Email Details"});
           if(ei?.previewText) d.push({label:"Email body",value:ei.previewText.slice(0, 200) + (ei.previewText.length > 200 ? "..." : ""),section:"Email Details"});
-          // Sender info from the email object (fetched during sync)
           if(ei?.fromName) d.push({label:"Sender name",value:ei.fromName,section:"Sender"});
           if(ei?.fromEmail) d.push({label:"Sender email",value:ei.fromEmail,section:"Sender"});
           if(ei?.replyTo) d.push({label:"Reply-to",value:ei.replyTo,section:"Sender"});
           d.push({label:"Email ID",value:String(cid),section:"Technical"});
         }
-        // Also check workflow action fields for sender overrides
         hk.add("from_name"); hk.add("from_email"); hk.add("reply_to"); hk.add("reply_to_name");
         hk.add("subscription_id"); hk.add("subscription_name"); hk.add("campaignId"); hk.add("campaign_name");
         af("from_name","Sender name (override)","Sender"); af("from_email","Sender email (override)","Sender");
@@ -246,12 +202,12 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
         af("campaignId","Campaign ID","Settings"); af("campaign_name","Campaign name","Settings");
         break;
       }
-      case "0-9": case "0-20": { // Enroll / Unenroll
+      case "0-9": case "0-20": {
         const fid=f.flow_id||f.flowId; hk.add("flow_id"); hk.add("flowId");
         if(fid) { summary=`Workflow ${fid}`; d.push({label:"Target workflow ID",value:String(fid),section:"Configuration"}); }
         break;
       }
-      case "0-3": { // Create task
+      case "0-3": {
         const pts: string[] = []; hk.add("task_type"); hk.add("subject"); hk.add("body"); hk.add("due_time"); hk.add("priority"); hk.add("associations"); hk.add("use_explicit_associations"); hk.add("queue_id"); hk.add("for_object_type"); hk.add("owner_id"); hk.add("owner_assignment"); hk.add("send_default_reminder"); hk.add("reminder_minutes_before"); hk.add("notes");
         if(f.task_type) { const tm:any={TODO:"To-do",CALL:"Call",EMAIL:"Email"}; const tl=tm[f.task_type]||f.task_type; pts.push(tl.toLowerCase()); d.push({label:"Type",value:tl,section:"Task Details"}); }
         if(f.subject) { pts.push(`"${f.subject}"`); d.push({label:"Title",value:f.subject,section:"Task Details"}); }
@@ -265,15 +221,10 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
           const assignLabel = assignTypes[oa.type] || oa.type || "Assignment";
           let assignValue = assignLabel;
           if (oa.value) {
-            if (oa.value.type === "OBJECT_PROPERTY") {
-              assignValue = `Record ${fp(oa.value.propertyName || "owner")}`;
-            } else if (oa.value.type === "SPECIFIC_USER" || oa.value.userId) {
-              assignValue = `User ID: ${oa.value.userId || oa.value.id || "unknown"}`;
-            } else if (oa.value.type === "TEAM") {
-              assignValue = `Team ID: ${oa.value.teamId || "unknown"}`;
-            } else if (typeof oa.value === "string") {
-              assignValue = isTemplateVar(oa.value) ? tv(oa.value) : oa.value;
-            }
+            if (oa.value.type === "OBJECT_PROPERTY") assignValue = `Record ${fp(oa.value.propertyName || "owner")}`;
+            else if (oa.value.type === "SPECIFIC_USER" || oa.value.userId) assignValue = `User ID: ${oa.value.userId || oa.value.id || "unknown"}`;
+            else if (oa.value.type === "TEAM") assignValue = `Team ID: ${oa.value.teamId || "unknown"}`;
+            else if (typeof oa.value === "string") assignValue = isTemplateVar(oa.value) ? tv(oa.value) : oa.value;
           }
           d.push({label:"Assigned to", value:assignValue, section:"Assignment"});
           d.push({label:"Assignment type", value:assignLabel, section:"Assignment"});
@@ -292,15 +243,15 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
           let al="Association"; if(t?.associationCategory) al=t.associationCategory==="HUBSPOT_DEFINED"?"HubSpot defined":t.associationCategory; if(t?.associationTypeId) al+=` (Type ${t.associationTypeId})`;
           d.push({label:al,value:v?.type==="ENROLLED_OBJECT"?"Enrolled record":v?.type||"Linked record",section:"Associations"});
         }}
-        summary=pts.length>0?pts.join(" · "):"Create task"; break;
+        summary=pts.length>0?pts.join(" \u00b7 "):"Create task"; break;
       }
-      case "0-1": { // Delay
+      case "0-1": {
         hk.add("delayMillis"); hk.add("delay_millis"); hk.add("delta"); hk.add("timeUnit");
         const ms=f.delayMillis||f.delay_millis; if(ms) { const fmt=fd(Number(ms)); summary=`Wait ${fmt}`; d.push({label:"Duration",value:fmt,section:"Configuration"}); d.push({label:"Milliseconds",value:String(ms),section:"Technical"}); }
         else if(f.delta&&f.timeUnit) { summary=`Wait ${f.delta} ${f.timeUnit.toLowerCase()}`; d.push({label:"Duration",value:`${f.delta} ${f.timeUnit.toLowerCase()}`,section:"Configuration"}); }
         break;
       }
-      case "0-10": { // Webhook
+      case "0-10": {
         hk.add("url"); hk.add("method"); hk.add("webhook_url"); hk.add("requestBody"); hk.add("headers"); hk.add("authentication");
         if(f.url) { summary=f.url; d.push({label:"URL",value:f.url,section:"Request"}); }
         af("webhook_url","URL","Request"); af("method","Method","Request");
@@ -309,26 +260,26 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
         if(f.authentication) d.push({label:"Auth",value:(typeof f.authentication==="string"?f.authentication:JSON.stringify(f.authentication)).slice(0,200),section:"Request"});
         break;
       }
-      case "0-11": case "0-12": { // Lists
+      case "0-11": case "0-12": {
         const lid=f.list_id||f.listId||f.staticListId; hk.add("list_id"); hk.add("listId"); hk.add("staticListId");
         if(lid) { const ln=ll[String(lid)]; summary=ln||`List #${lid}`; if(ln) d.push({label:"List name",value:ln,section:"Configuration"}); d.push({label:"List ID",value:String(lid),section:"Technical"}); }
         break;
       }
-      case "0-7": case "0-8": { // Notifications
+      case "0-7": case "0-8": {
         hk.add("subject"); hk.add("body"); hk.add("recipient"); hk.add("recipients"); hk.add("owner_property"); hk.add("team_id"); hk.add("user_id");
         if(f.subject) { summary=`Notify: ${f.subject}`; d.push({label:"Subject",value:f.subject,section:"Notification"}); }
         if(f.body) d.push({label:"Body",value:f.body,section:"Notification"});
         af("recipient","Recipient","Recipient"); af("recipients","Recipients","Recipient"); af("owner_property","Owner property","Recipient"); af("team_id","Team","Recipient"); af("user_id","User","Recipient");
         break;
       }
-      case "0-13": { // Create deal
+      case "0-13": {
         hk.add("pipeline"); hk.add("dealstage"); hk.add("dealname"); hk.add("amount"); hk.add("closedate"); hk.add("hubspot_owner_id");
         if(f.pipeline) d.push({label:"Pipeline",value:pl[f.pipeline]||f.pipeline,section:"Deal Details"});
         if(f.dealstage) d.push({label:"Stage",value:sl[f.dealstage]||sol[f.dealstage]||f.dealstage,section:"Deal Details"});
         af("dealname","Deal name","Deal Details"); af("amount","Amount","Deal Details"); af("closedate","Close date","Deal Details"); af("hubspot_owner_id","Owner","Deal Details");
         summary="Create deal"; break;
       }
-      case "0-16": { // Create ticket
+      case "0-16": {
         hk.add("hs_pipeline"); hk.add("hs_pipeline_stage"); hk.add("subject"); hk.add("content"); hk.add("hs_ticket_priority"); hk.add("hs_ticket_category"); hk.add("hubspot_owner_id");
         af("subject","Subject","Ticket Details"); af("content","Description","Ticket Details"); af("hs_pipeline","Pipeline","Ticket Details"); af("hs_pipeline_stage","Stage","Ticket Details");
         af("hs_ticket_priority","Priority","Ticket Details"); af("hs_ticket_category","Category","Ticket Details"); af("hubspot_owner_id","Owner","Ticket Details");
@@ -345,7 +296,6 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
         break;
       }
     }
-    // Remaining fields
     for (const [k, v] of Object.entries(f)) {
       if (hk.has(k)||v===null||v===undefined) continue;
       const sv = typeof v==="string"?v : typeof v==="number"||typeof v==="boolean"?String(v) : v?.staticValue!==undefined?String(v.staticValue) : null;
@@ -387,8 +337,6 @@ function rvs(v:any,p:string,sl:any,sol:any,pl:any):string|null {
 }
 function dtp(tp:any):string|null { if(!tp) return null; const r=tp.indexReference; if(r) { const m:any={TODAY:"today",NOW:"now"}; let b=m[r.referenceType]||r.referenceType?.toLowerCase().replace(/_/g," ")||""; if(tp.offset) { const p:string[]=[]; if(tp.offset.days)p.push(`${tp.offset.days}d`); if(tp.offset.hours)p.push(`${tp.offset.hours}h`); if(p.length)return`${b} + ${p.join(" ")}`; } return b; } return null; }
 
-// ActionStep component with sections
-// Parse a dynamic reference like "Line Item's Name" into { obj, prop }
 function parseDynRef(text: string): { obj: string; prop: string } | null {
   if (!text) return null;
   const match = text.match(/^(Line Item|Contact|Company|Deal|Ticket|Product|Quote|Invoice|Order|Meeting|Call|Task|Note|Custom Object|Object|Record) (.+)$/i);
@@ -397,10 +345,7 @@ function parseDynRef(text: string): { obj: string; prop: string } | null {
   if (recordMatch) return { obj: "Record", prop: recordMatch[1] };
   return null;
 }
-
-function isDynRef(text: string): boolean {
-  return parseDynRef(text) !== null || /^Dynamic:/i.test(text) || /^Associated /i.test(text);
-}
+function isDynRef(text: string): boolean { return parseDynRef(text) !== null || /^Dynamic:/i.test(text) || /^Associated /i.test(text); }
 
 const OBJ_TAG_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   "Contact":       { bg: "#EFF6FF", text: "#2E75B6", border: "#BFDBFE" },
@@ -441,14 +386,8 @@ function ValueDisplay({ value }: { value: string }) {
 
 function ActionStep({ action, isExpanded, onToggle }: { action: ParsedAction; isExpanded: boolean; onToggle: () => void }) {
   const hasDetails = action.details.length > 0;
-  // Group details by section
   const sections = new Map<string, Array<{ label: string; value: string }>>();
-  for (const d of action.details) {
-    const sec = d.section || "Details";
-    if (!sections.has(sec)) sections.set(sec, []);
-    sections.get(sec)!.push(d);
-  }
-  // Filter out Technical section by default, show at bottom
+  for (const d of action.details) { const sec = d.section || "Details"; if (!sections.has(sec)) sections.set(sec, []); sections.get(sec)!.push(d); }
   const mainSections = [...sections.entries()].filter(([s]) => s !== "Technical" && s !== "Other");
   const techSection = sections.get("Technical");
   const otherSection = sections.get("Other");
@@ -469,10 +408,10 @@ function ActionStep({ action, isExpanded, onToggle }: { action: ParsedAction; is
           </div>
           <p className="text-[11px] mt-1 opacity-80 leading-snug break-words flex flex-wrap items-center gap-0.5">
             {(() => {
-              if (action.summary.includes(" → ")) {
-                const [left, right] = [action.summary.split(" → ")[0], action.summary.split(" → ").slice(1).join(" → ")];
+              if (action.summary.includes(" \u2192 ")) {
+                const [left, right] = [action.summary.split(" \u2192 ")[0], action.summary.split(" \u2192 ").slice(1).join(" \u2192 ")];
                 const parsed = parseDynRef(right);
-                if (parsed) return <>{left} → <ObjTag name={parsed.obj} /><span> {parsed.prop}</span></>;
+                if (parsed) return <>{left} \u2192 <ObjTag name={parsed.obj} /><span> {parsed.prop}</span></>;
               }
               const parsed = parseDynRef(action.summary);
               if (parsed) return <><ObjTag name={parsed.obj} /><span> {parsed.prop}</span></>;
@@ -484,17 +423,8 @@ function ActionStep({ action, isExpanded, onToggle }: { action: ParsedAction; is
           <div className="mt-1.5 ml-1 rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
             {mainSections.map(([sectionName, items]) => (
               <div key={sectionName} className="border-b border-gray-100 last:border-0">
-                <div className="px-3 py-1.5 bg-gray-50">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{sectionName}</span>
-                </div>
-                <div className="px-3 py-2 space-y-1.5">
-                  {items.map((d, i) => (
-                    <div key={i} className="flex items-start gap-2 text-[11px]">
-                      <span className="text-gray-400 font-medium min-w-[90px] flex-shrink-0">{d.label}</span>
-                      <ValueDisplay value={d.value} />
-                    </div>
-                  ))}
-                </div>
+                <div className="px-3 py-1.5 bg-gray-50"><span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{sectionName}</span></div>
+                <div className="px-3 py-2 space-y-1.5">{items.map((d, i) => (<div key={i} className="flex items-start gap-2 text-[11px]"><span className="text-gray-400 font-medium min-w-[90px] flex-shrink-0">{d.label}</span><ValueDisplay value={d.value} /></div>))}</div>
               </div>
             ))}
             {otherSection && otherSection.length > 0 && (
@@ -533,6 +463,13 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
   const [assignedTagIds, setAssignedTagIds] = useState<Set<string>>(new Set());
   const [newTagInput, setNewTagInput] = useState("");
 
+  // AI Analysis state
+  const [localScore, setLocalScore] = useState<LocalScore | null>(null);
+  const [aiResult, setAiResult] = useState<AnalysisResult | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const { canUse, isFree } = usePlan(portalId);
+
   useEffect(() => {
     (async () => {
       setLoading(true); setExp(new Set()); setImpact(null); setImpactOpen(false);
@@ -553,20 +490,26 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
     })();
   }, [portalId, workflowId]);
 
+  // Run local scoring when workflow loads
+  useEffect(() => {
+    if (!wf) { setLocalScore(null); return; }
+    const score = scoreWorkflow({
+      name: wf.name,
+      objectType: wf.objectType,
+      enrollmentCriteria: wf.enrollmentCriteria,
+      steps: wf.actions,
+    });
+    setLocalScore(score);
+    setAiResult(null);
+    setAiError(null);
+  }, [wf]);
+
   const toggleWorkflowTag = async (tagId: string) => {
     const isAssigned = assignedTagIds.has(tagId);
     const action = isAssigned ? "unassign" : "assign";
     try {
-      await fetch("/api/tags", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ portalId, action, workflowId, tagId }),
-      });
-      setAssignedTagIds(prev => {
-        const next = new Set(prev);
-        if (isAssigned) next.delete(tagId); else next.add(tagId);
-        return next;
-      });
+      await fetch("/api/tags", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ portalId, action, workflowId, tagId }) });
+      setAssignedTagIds(prev => { const next = new Set(prev); if (isAssigned) next.delete(tagId); else next.add(tagId); return next; });
     } catch {}
   };
 
@@ -575,23 +518,41 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
     const TAG_COLORS = ["#6366f1", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#EF4444", "#8B5CF6", "#14B8A6"];
     const color = TAG_COLORS[allTags.length % TAG_COLORS.length];
     try {
-      const res = await fetch("/api/tags", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ portalId, action: "create", name: newTagInput.trim(), color }),
-      });
+      const res = await fetch("/api/tags", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ portalId, action: "create", name: newTagInput.trim(), color }) });
       if (res.ok) {
         const tag = await res.json();
         setAllTags(prev => [...prev, { ...tag, _count: { workflowTags: 0 } }]);
-        await fetch("/api/tags", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ portalId, action: "assign", workflowId, tagId: tag.id }),
-        });
+        await fetch("/api/tags", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ portalId, action: "assign", workflowId, tagId: tag.id }) });
         setAssignedTagIds(prev => new Set([...prev, tag.id]));
         setNewTagInput("");
       }
     } catch {}
+  };
+
+  // AI deep analysis handler
+  const runAiAnalysis = async () => {
+    if (!wf || aiLoading) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const res = await fetch("/api/analyst", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: wf.name,
+          objectType: wf.objectType,
+          enrollmentCriteria: wf.enrollmentCriteria ? JSON.stringify(wf.enrollmentCriteria) : undefined,
+          rawJson: JSON.stringify({ name: wf.name, objectType: wf.objectType, enrollmentCriteria: wf.enrollmentCriteria, actions: wf.actions }),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setAiError(data.error || "Analysis failed"); return; }
+      setAiResult(data.analysis);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Network error");
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const pa = wf ? parseActions(wf.actions, sl, sol, pl, el, ll, wf.dataSources as any[]) : [];
@@ -618,6 +579,11 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${wf.status==="ACTIVE"?"bg-emerald-50 text-emerald-700":wf.status==="ERRORING"?"bg-red-50 text-red-700":"bg-gray-100 text-gray-600"}`}>{wf.status.toLowerCase()}</span>
                 <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{backgroundColor:`${hc}15`,color:hc}}>{wf.objectType.toLowerCase()}</span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{pa.length} action{pa.length!==1?"s":""}</span>
+                {localScore && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${localScore.bgColor} ${localScore.color}`} title={`Health: ${localScore.overall}/100`}>
+                    {localScore.grade} {localScore.overall}
+                  </span>
+                )}
               </div>
               <div className="mt-2 text-xs text-gray-400 space-y-0.5">
                 {wf.hubspotUpdatedAt && <p>Modified: {new Date(wf.hubspotUpdatedAt).toLocaleDateString()}</p>}
@@ -640,12 +606,8 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
               return (
                 <button key={tag.id} onClick={() => toggleWorkflowTag(tag.id)}
                   className="text-[10px] font-semibold px-2 py-0.5 rounded-md transition-all"
-                  style={{
-                    backgroundColor: isAssigned ? tag.color : `${tag.color}12`,
-                    color: isAssigned ? "white" : `${tag.color}80`,
-                    border: `1.5px solid ${isAssigned ? tag.color : `${tag.color}25`}`,
-                  }}>
-                  {isAssigned && "✓ "}{tag.name}
+                  style={{ backgroundColor: isAssigned ? tag.color : `${tag.color}12`, color: isAssigned ? "white" : `${tag.color}80`, border: `1.5px solid ${isAssigned ? tag.color : `${tag.color}25`}` }}>
+                  {isAssigned && "\u2713 "}{tag.name}
                 </button>
               );
             })}
@@ -658,20 +620,134 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
           </div>
         </div>
 
+        {/* AI Analysis */}
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+              \ud83d\udd2c AI Analysis
+            </h5>
+            {localScore && (
+              <div className="flex items-center gap-1.5">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${localScore.bgColor} ${localScore.color}`} title={`Health score: ${localScore.overall}/100`}>
+                  {localScore.grade}
+                </div>
+                <span className={`text-xs font-bold tabular-nums ${localScore.color}`}>{localScore.overall}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Local score flags */}
+          {localScore && localScore.flags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {localScore.flags.map((flag, i) => (
+                <span key={i} className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">{flag}</span>
+              ))}
+            </div>
+          )}
+
+          {/* Local issues */}
+          {localScore && localScore.issues.length > 0 && (
+            <div className="space-y-1.5 mb-3">
+              {localScore.issues.map((issue, i) => (
+                <div key={i} className="flex items-start gap-1.5 text-[11px]">
+                  <span className="flex-shrink-0 mt-px">
+                    {issue.severity === "critical" ? "\u26d4" : issue.severity === "warning" ? "\u26a0\ufe0f" : "\u2139\ufe0f"}
+                  </span>
+                  <span className="text-gray-600 leading-relaxed">{issue.title}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {localScore && localScore.issues.length === 0 && (
+            <p className="text-[11px] text-emerald-600 mb-3">No issues in quick scan \u2713</p>
+          )}
+
+          {/* AI deep analysis */}
+          {isFree ? (
+            <a href={`/pricing?portal=${portalId}`}
+              className="block w-full text-center px-3 py-2 rounded-lg text-[11px] font-semibold border-2 border-dashed border-violet-200 text-violet-500 hover:bg-violet-50 transition-colors">
+              Upgrade for AI deep analysis \u2192
+            </a>
+          ) : !aiResult ? (
+            <div>
+              <button onClick={runAiAnalysis} disabled={aiLoading}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white transition-all disabled:opacity-50 hover:shadow-md"
+                style={{ background: "linear-gradient(135deg, #7C3AED, #DB2777)" }}>
+                {aiLoading ? (
+                  <><div className="animate-spin rounded-full h-3 w-3 border-2 border-white/30 border-t-white" /> Analysing...</>
+                ) : (
+                  <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z" /><path d="m14 7 3 3" /></svg> Deep Analyse</>
+                )}
+              </button>
+              {aiError && <p className="text-[10px] text-red-600 mt-1.5">{aiError}</p>}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-[11px] text-gray-600 leading-relaxed">{aiResult.summary}</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                <div className="bg-gray-50 rounded-md px-2 py-1.5 text-center">
+                  <div className="text-xs font-bold text-gray-900">{aiResult.metrics.complexityScore}/10</div>
+                  <div className="text-[9px] text-gray-400">Complexity</div>
+                </div>
+                <div className="bg-gray-50 rounded-md px-2 py-1.5 text-center">
+                  <div className="text-xs font-bold text-gray-900">{aiResult.metrics.estimatedRuntime}</div>
+                  <div className="text-[9px] text-gray-400">Runtime</div>
+                </div>
+                <div className={`rounded-md px-2 py-1.5 text-center ${aiResult.metrics.enrollmentRisk === "high" ? "bg-red-50" : aiResult.metrics.enrollmentRisk === "medium" ? "bg-amber-50" : "bg-emerald-50"}`}>
+                  <div className={`text-xs font-bold ${aiResult.metrics.enrollmentRisk === "high" ? "text-red-700" : aiResult.metrics.enrollmentRisk === "medium" ? "text-amber-700" : "text-emerald-700"}`}>{aiResult.metrics.enrollmentRisk}</div>
+                  <div className="text-[9px] text-gray-400">Enroll risk</div>
+                </div>
+              </div>
+              {aiResult.issues && aiResult.issues.length > 0 && (
+                <div>
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Issues</p>
+                  <div className="space-y-2">
+                    {aiResult.issues.map((issue, i) => (
+                      <div key={i} className={`rounded-md border px-2.5 py-2 ${issue.severity === "critical" ? "border-red-200 bg-red-50/50" : issue.severity === "warning" ? "border-amber-200 bg-amber-50/50" : "border-blue-200 bg-blue-50/50"}`}>
+                        <div className="flex items-start gap-1.5">
+                          <span className="text-[10px] mt-px flex-shrink-0">{issue.severity === "critical" ? "\u26d4" : issue.severity === "warning" ? "\u26a0\ufe0f" : "\u2139\ufe0f"}</span>
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-semibold text-gray-900">{issue.title}</p>
+                            <p className="text-[10px] text-gray-500 mt-0.5 leading-relaxed">{issue.detail}</p>
+                            <p className="text-[10px] text-violet-600 mt-1 font-medium">Fix \u2192 {issue.suggestion}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {aiResult.optimizations && aiResult.optimizations.length > 0 && (
+                <div>
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Optimizations</p>
+                  <div className="space-y-1">
+                    {aiResult.optimizations.map((opt, i) => (
+                      <div key={i} className="flex items-start gap-1.5 text-[11px]">
+                        <span className="text-violet-500 mt-px flex-shrink-0">\u25c6</span>
+                        <span className="text-gray-600 leading-relaxed">{opt}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button onClick={runAiAnalysis} disabled={aiLoading} className="text-[10px] text-violet-600 hover:text-violet-700 font-medium disabled:opacity-50">
+                {aiLoading ? "Analysing..." : "Re-analyse \u21bb"}
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Impact Simulator */}
         <div className="px-4 py-3 border-b border-gray-100">
           <button
             onClick={async () => {
               if (impact) { setImpactOpen(!impactOpen); return; }
               setImpactLoading(true); setImpactOpen(true);
-              try {
-                const res = await fetch(`/api/impact-simulator?portalId=${portalId}&workflowId=${workflowId}`);
-                if (res.ok) setImpact(await res.json());
-              } catch {} finally { setImpactLoading(false); }
+              try { const res = await fetch(`/api/impact-simulator?portalId=${portalId}&workflowId=${workflowId}`); if (res.ok) setImpact(await res.json()); } catch {} finally { setImpactLoading(false); }
             }}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/50 hover:bg-amber-50 hover:border-amber-400 transition-all group"
-          >
-            <span className="text-lg">🔮</span>
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/50 hover:bg-amber-50 hover:border-amber-400 transition-all group">
+            <span className="text-lg">\ud83d\udd2e</span>
             <div className="flex-1 text-left">
               <p className="text-xs font-bold text-amber-900">What if I deactivate this?</p>
               <p className="text-[10px] text-amber-600">Simulate the impact on other workflows</p>
@@ -684,63 +760,33 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
               <svg className="w-4 h-4 text-amber-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
             )}
           </button>
-
           {impactOpen && impact && (
             <div className="mt-3 space-y-3">
-              {/* Summary bar */}
               <div className={`rounded-lg px-3 py-2.5 ${impact.summary.safe ? "bg-emerald-50 border border-emerald-200" : impact.summary.criticalCount > 0 ? "bg-red-50 border border-red-200" : "bg-amber-50 border border-amber-200"}`}>
                 {impact.summary.safe ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">✅</span>
-                    <div>
-                      <p className="text-xs font-bold text-emerald-800">Safe to deactivate</p>
-                      <p className="text-[10px] text-emerald-600">No other workflows depend on this one.</p>
-                    </div>
-                  </div>
+                  <div className="flex items-center gap-2"><span className="text-lg">\u2705</span><div><p className="text-xs font-bold text-emerald-800">Safe to deactivate</p><p className="text-[10px] text-emerald-600">No other workflows depend on this one.</p></div></div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{impact.summary.criticalCount > 0 ? "🚨" : "⚠️"}</span>
-                    <div>
-                      <p className="text-xs font-bold" style={{ color: impact.summary.criticalCount > 0 ? "#991B1B" : "#92400E" }}>
-                        {impact.summary.totalAffected} workflow{impact.summary.totalAffected !== 1 ? "s" : ""} will be affected
-                      </p>
-                      <p className="text-[10px]" style={{ color: impact.summary.criticalCount > 0 ? "#B91C1C" : "#A16207" }}>
-                        {impact.summary.criticalCount > 0 && `${impact.summary.criticalCount} critical issue${impact.summary.criticalCount > 1 ? "s" : ""}. `}
-                        {impact.summary.propertiesAffected > 0 && `${impact.summary.propertiesAffected} propert${impact.summary.propertiesAffected > 1 ? "ies" : "y"} affected. `}
-                        {impact.summary.emailsAffected > 0 && `${impact.summary.emailsAffected} email${impact.summary.emailsAffected > 1 ? "s" : ""} will stop.`}
-                      </p>
-                    </div>
-                  </div>
+                  <div className="flex items-center gap-2"><span className="text-lg">{impact.summary.criticalCount > 0 ? "\ud83d\udea8" : "\u26a0\ufe0f"}</span><div>
+                    <p className="text-xs font-bold" style={{ color: impact.summary.criticalCount > 0 ? "#991B1B" : "#92400E" }}>{impact.summary.totalAffected} workflow{impact.summary.totalAffected !== 1 ? "s" : ""} will be affected</p>
+                    <p className="text-[10px]" style={{ color: impact.summary.criticalCount > 0 ? "#B91C1C" : "#A16207" }}>
+                      {impact.summary.criticalCount > 0 && `${impact.summary.criticalCount} critical issue${impact.summary.criticalCount > 1 ? "s" : ""}. `}
+                      {impact.summary.propertiesAffected > 0 && `${impact.summary.propertiesAffected} propert${impact.summary.propertiesAffected > 1 ? "ies" : "y"} affected. `}
+                      {impact.summary.emailsAffected > 0 && `${impact.summary.emailsAffected} email${impact.summary.emailsAffected > 1 ? "s" : ""} will stop.`}
+                    </p>
+                  </div></div>
                 )}
               </div>
-
-              {/* Impact items */}
               {impact.impacts.map((item: any, idx: number) => (
-                <div key={idx} className={`rounded-lg border px-3 py-2.5 ${
-                  item.severity === "critical" ? "border-red-200 bg-red-50/50" :
-                  item.severity === "warning" ? "border-amber-200 bg-amber-50/50" :
-                  "border-blue-200 bg-blue-50/50"
-                }`}>
+                <div key={idx} className={`rounded-lg border px-3 py-2.5 ${item.severity === "critical" ? "border-red-200 bg-red-50/50" : item.severity === "warning" ? "border-amber-200 bg-amber-50/50" : "border-blue-200 bg-blue-50/50"}`}>
                   <div className="flex items-start gap-2">
-                    <span className="text-xs mt-0.5 flex-shrink-0">
-                      {item.type === "property_stops" ? "✏️" :
-                       item.type === "enrollment_lost" ? "➡️" :
-                       item.type === "list_orphaned" ? "📝" :
-                       item.type === "email_stops" ? "📧" :
-                       item.type === "cascade" ? "🔗" : "⚠️"}
-                    </span>
+                    <span className="text-xs mt-0.5 flex-shrink-0">{item.type === "property_stops" ? "\u270f\ufe0f" : item.type === "enrollment_lost" ? "\u27a1\ufe0f" : item.type === "list_orphaned" ? "\ud83d\udcdd" : item.type === "email_stops" ? "\ud83d\udce7" : item.type === "cascade" ? "\ud83d\udd17" : "\u26a0\ufe0f"}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-gray-900">{item.title}</p>
                       <p className="text-[10px] text-gray-500 mt-0.5 leading-relaxed">{item.detail}</p>
                       {item.affectedWorkflows.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                          {item.affectedWorkflows.map((aw: any) => (
-                            <div key={aw.id} className="flex items-center gap-1.5">
-                              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${aw.status === "ACTIVE" ? "bg-emerald-500" : "bg-gray-400"}`} />
-                              <span className="text-[10px] text-gray-700 break-words">{aw.name}</span>
-                            </div>
-                          ))}
-                        </div>
+                        <div className="mt-2 space-y-1">{item.affectedWorkflows.map((aw: any) => (
+                          <div key={aw.id} className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${aw.status === "ACTIVE" ? "bg-emerald-500" : "bg-gray-400"}`} /><span className="text-[10px] text-gray-700 break-words">{aw.name}</span></div>
+                        ))}</div>
                       )}
                     </div>
                   </div>
@@ -749,15 +795,16 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
             </div>
           )}
         </div>
+
         {/* Enrollment */}
         {et.length>0 && <div className="px-4 py-3 border-b border-gray-100">
-          <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">📥 Enrollment Trigger</h5>
-          <div className="space-y-1">{et.map((l,i) => <div key={i} className="flex items-start gap-2"><span className="text-gray-300 mt-px">•</span><p className="text-xs text-gray-700 leading-relaxed">{l}</p></div>)}</div>
+          <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">\ud83d\udce5 Enrollment Trigger</h5>
+          <div className="space-y-1">{et.map((l,i) => <div key={i} className="flex items-start gap-2"><span className="text-gray-300 mt-px">\u2022</span><p className="text-xs text-gray-700 leading-relaxed">{l}</p></div>)}</div>
         </div>}
         {/* Actions */}
         {pa.length>0 && <div className="px-4 py-3 border-b border-gray-100">
           <div className="flex items-center justify-between mb-3">
-            <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">⚡ Actions ({pa.length})</h5>
+            <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">\u26a1 Actions ({pa.length})</h5>
             {pa.some(a=>a.details.length>0) && <button onClick={()=>{if(exp.size>0)setExp(new Set());else setExp(new Set(pa.map(a=>a.stepNumber)));}} className="text-[10px] text-blue-600 hover:text-blue-700 font-medium">{exp.size>0?"Collapse all":"Expand all"}</button>}
           </div>
           <div className="relative">
@@ -767,12 +814,12 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
         </div>}
         {/* Conflicts */}
         {wf.conflictWorkflows.length>0 && <div className="px-4 py-3 border-b border-gray-100">
-          <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">⚠️ Conflicts ({wf.conflictWorkflows.length})</h5>
+          <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">\u26a0\ufe0f Conflicts ({wf.conflictWorkflows.length})</h5>
           <div className="space-y-2">{wf.conflictWorkflows.map(cw => <div key={cw.conflict.id} className="rounded-md border border-gray-100 p-2.5"><div className="flex items-center gap-1.5 mb-1"><span className={`text-xs px-1.5 py-0.5 rounded font-medium ${SS[cw.conflict.severity]||""}`}>{cw.conflict.severity.toLowerCase()}</span><span className="text-xs text-gray-500">{DL[cw.conflict.type]||cw.conflict.type}</span></div><p className="text-xs text-gray-600 leading-relaxed">{cw.conflict.description}</p></div>)}</div>
         </div>}
         {/* Deps */}
-        {wf.sourceDependencies.length>0 && <div className="px-4 py-3 border-b border-gray-100"><h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">➡️ Affects ({wf.sourceDependencies.length})</h5><div className="space-y-1.5">{wf.sourceDependencies.map(d=><div key={d.id} className="flex items-center gap-2 text-xs"><span className={`px-1.5 py-0.5 rounded font-medium ${SS[d.severity]||"bg-gray-100 text-gray-600"}`}>{DL[d.type]||d.type}</span><span className="text-gray-600 truncate flex-1">{d.targetWorkflow?.name||"Unknown"}</span></div>)}</div></div>}
-        {wf.targetDependencies.length>0 && <div className="px-4 py-3"><h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">⬅️ Affected by ({wf.targetDependencies.length})</h5><div className="space-y-1.5">{wf.targetDependencies.map(d=><div key={d.id} className="flex items-center gap-2 text-xs"><span className={`px-1.5 py-0.5 rounded font-medium ${SS[d.severity]||"bg-gray-100 text-gray-600"}`}>{DL[d.type]||d.type}</span><span className="text-gray-600 truncate flex-1">{d.sourceWorkflow?.name||"Unknown"}</span></div>)}</div></div>}
+        {wf.sourceDependencies.length>0 && <div className="px-4 py-3 border-b border-gray-100"><h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">\u27a1\ufe0f Affects ({wf.sourceDependencies.length})</h5><div className="space-y-1.5">{wf.sourceDependencies.map(d=><div key={d.id} className="flex items-center gap-2 text-xs"><span className={`px-1.5 py-0.5 rounded font-medium ${SS[d.severity]||"bg-gray-100 text-gray-600"}`}>{DL[d.type]||d.type}</span><span className="text-gray-600 truncate flex-1">{d.targetWorkflow?.name||"Unknown"}</span></div>)}</div></div>}
+        {wf.targetDependencies.length>0 && <div className="px-4 py-3"><h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">\u2b05\ufe0f Affected by ({wf.targetDependencies.length})</h5><div className="space-y-1.5">{wf.targetDependencies.map(d=><div key={d.id} className="flex items-center gap-2 text-xs"><span className={`px-1.5 py-0.5 rounded font-medium ${SS[d.severity]||"bg-gray-100 text-gray-600"}`}>{DL[d.type]||d.type}</span><span className="text-gray-600 truncate flex-1">{d.sourceWorkflow?.name||"Unknown"}</span></div>)}</div></div>}
       </div>}
     </div>
   );
