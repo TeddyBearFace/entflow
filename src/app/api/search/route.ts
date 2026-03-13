@@ -50,6 +50,20 @@ export async function GET(request: NextRequest) {
 
   const results: SearchResult[] = [];
 
+// Fetch tags and assignments
+  const tags = await prisma.tag.findMany({ where: { portalId } });
+  const tagAssignments = await prisma.workflowTag.findMany({
+    where: { tag: { portalId } },
+    select: { workflowId: true, tagId: true },
+  });
+  const tagLookup: Record<string, string> = {};
+  for (const t of tags) tagLookup[t.id] = t.name;
+  const workflowTags: Record<string, string[]> = {};
+  for (const a of tagAssignments) {
+    if (!workflowTags[a.workflowId]) workflowTags[a.workflowId] = [];
+    workflowTags[a.workflowId].push(a.tagId);
+  }
+
   for (const wf of workflows) {
     // Match workflow name
     if (wf.name.toLowerCase().includes(q)) {
@@ -58,6 +72,19 @@ export async function GET(request: NextRequest) {
         objectType: wf.objectType, status: wf.status,
         matchType: "workflow_name", matchDetail: `Workflow name: "${wf.name}"`,
       });
+    }
+
+    // Match tags
+    const wfTags = workflowTags[wf.id] || [];
+    for (const tagId of wfTags) {
+      const tagName = tagLookup[tagId] || "";
+      if (tagName.toLowerCase().includes(q)) {
+        results.push({
+          workflowId: wf.id, workflowName: wf.name, hubspotFlowId: wf.hubspotFlowId,
+          objectType: wf.objectType, status: wf.status,
+          matchType: "workflow_name", matchDetail: `Tagged: "${tagName}"`,
+        });
+      }
     }
 
     // Search actions
