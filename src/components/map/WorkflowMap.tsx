@@ -940,6 +940,10 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
               <a href={`/changelog?portal=${portalId}`} className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:border-gray-300 transition-colors flex items-center gap-1.5">
                 📋 Changelog
               </a>
+              {/* AI Analyst */}
+              <a href={`/analyst?portal=${portalId}`} className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:text-violet-700 hover:border-violet-300 transition-colors flex items-center gap-1.5">
+                🔬 AI Analyst
+              </a>
               {/* Auto-sync toggle */}
               <ProBadge allowed={canUse("autoSync")} portalId={portalId} feature="Auto-sync">
                 <button onClick={toggleAutoSync} className={`backdrop-blur-sm rounded-lg shadow-sm border px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${autoSync.enabled ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white/90 border-gray-200 text-gray-500 hover:text-gray-700"}`}>

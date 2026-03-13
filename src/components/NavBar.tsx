@@ -20,6 +20,7 @@ export default function NavBar({ portalId, portalName }: NavBarProps) {
   const links = [
     { href: `/dashboard?portal=${pid}`, label: "Dashboard", icon: "📊", match: "/dashboard" },
     { href: `/map?portal=${pid}`, label: "Map", icon: "🗺️", match: "/map" },
+    { href: `/analyst?portal=${pid}`, label: "AI Analyst", icon: "🔬", match: "/analyst" },
     { href: `/changelog?portal=${pid}`, label: "Changelog", icon: "📋", match: "/changelog" },
     { href: `/documentation`, label: "Docs", icon: "📖", match: "/documentation" },
   ];

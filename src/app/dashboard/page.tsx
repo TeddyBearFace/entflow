@@ -151,6 +151,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             sub="Cross-workflow relationships"
             color="purple"
           />
+          <Link
+              href={`/analyst?portal=${portalId}`}
+              className="group block p-5 bg-white border border-gray-200 rounded-xl hover:border-violet-300 hover:shadow-md transition-all"
+            >
+              <span className="text-2xl">🔬</span>
+              <h3 className="text-sm font-semibold text-gray-900 group-hover:text-violet-700 mt-2">AI Analyst</h3>
+              <p className="text-xs text-gray-500 mt-1">Health scores & deep analysis for {totalWorkflows} workflows</p>
+            </Link>
           <StatCard
             label="Conflicts"
             value={totalConflicts}
@@ -181,7 +189,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         {/* Quick actions */}
         {totalWorkflows > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
             <Link
               href={`/map?portal=${portalId}`}
               className="group block p-5 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all"
