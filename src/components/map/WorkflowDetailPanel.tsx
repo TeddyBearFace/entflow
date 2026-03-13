@@ -747,7 +747,7 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
               try { const res = await fetch(`/api/impact-simulator?portalId=${portalId}&workflowId=${workflowId}`); if (res.ok) setImpact(await res.json()); } catch {} finally { setImpactLoading(false); }
             }}
             className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/50 hover:bg-amber-50 hover:border-amber-400 transition-all group">
-            <span className="text-lg">\ud83d\udd2e</span>
+            <span className="text-lg">🚨</span>
             <div className="flex-1 text-left">
               <p className="text-xs font-bold text-amber-900">What if I deactivate this?</p>
               <p className="text-[10px] text-amber-600">Simulate the impact on other workflows</p>
@@ -764,7 +764,7 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
             <div className="mt-3 space-y-3">
               <div className={`rounded-lg px-3 py-2.5 ${impact.summary.safe ? "bg-emerald-50 border border-emerald-200" : impact.summary.criticalCount > 0 ? "bg-red-50 border border-red-200" : "bg-amber-50 border border-amber-200"}`}>
                 {impact.summary.safe ? (
-                  <div className="flex items-center gap-2"><span className="text-lg">\u2705</span><div><p className="text-xs font-bold text-emerald-800">Safe to deactivate</p><p className="text-[10px] text-emerald-600">No other workflows depend on this one.</p></div></div>
+                  <div className="flex items-center gap-2"><span className="text-lg">✅</span><div><p className="text-xs font-bold text-emerald-800">Safe to deactivate</p><p className="text-[10px] text-emerald-600">No other workflows depend on this one.</p></div></div>
                 ) : (
                   <div className="flex items-center gap-2"><span className="text-lg">{impact.summary.criticalCount > 0 ? "\ud83d\udea8" : "\u26a0\ufe0f"}</span><div>
                     <p className="text-xs font-bold" style={{ color: impact.summary.criticalCount > 0 ? "#991B1B" : "#92400E" }}>{impact.summary.totalAffected} workflow{impact.summary.totalAffected !== 1 ? "s" : ""} will be affected</p>
