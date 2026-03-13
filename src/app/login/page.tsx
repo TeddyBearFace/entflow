@@ -14,7 +14,14 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState(error === "CredentialsSignin" ? "Invalid email or password" : "");
+  const errorMessages: Record<string, string> = {
+    CredentialsSignin: "Invalid email or password",
+    OAuthAccountNotLinked: "An account with this email already exists. Sign in with your original method, then link your account from settings.",
+    OAuthSignin: "Could not start sign in. Try again.",
+    OAuthCallback: "Sign in failed. Try again.",
+    Default: "Something went wrong. Please try again.",
+  };
+  const [errorMsg, setErrorMsg] = useState(error ? errorMessages[error] || errorMessages.Default : "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
