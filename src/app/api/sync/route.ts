@@ -66,20 +66,19 @@ export async function POST(request: NextRequest) {
 
     // ← CHANGE 3: replace fire-and-forget with waitUntil
     waitUntil(
-      syncPortal(portalId).catch(err =>
-        console.error(`Sync failed for portal ${portalId}:`, err)
-      )
-    );
-
-    return NextResponse.json({ started: true, portalId });
-  } catch (err) {
-    console.error("Sync error:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Sync failed" },
-      { status: 500 }
+      syncPortal(portalId).catch(async (err) => {
+        console.error(`[Sync] Failed for portal ${portalId}:`, err);
+        await prisma.portal.update({
+          where: { id: portalId },
+          data: {
+            syncStatus: "FAILED",
+            syncMessage: err instanceof Error ? err.message : "Sync failed unexpectedly",
+          },
+        });
+      })
     );
   }
-}
+
 
 // GET /api/sync?portalId=xxx
 // Get sync status and history for a portal.
