@@ -4,6 +4,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { syncPortal } from "@/lib/sync";
+import { waitUntil } from "@vercel/functions"; // ← CHANGE 1: add import
+
+export const maxDuration = 300; // ← CHANGE 2: add 5min timeout
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,9 +64,11 @@ export async function POST(request: NextRequest) {
     // Mark as syncing immediately so UI picks it up
     await prisma.portal.update({ where: { id: portalId }, data: { syncStatus: "SYNCING", syncMessage: "Starting sync..." } });
 
-    // Trigger sync (non-blocking - return immediately, let client poll for progress)
-    syncPortal(portalId).catch(err =>
-      console.error(`Sync failed for portal ${portalId}:`, err)
+    // ← CHANGE 3: replace fire-and-forget with waitUntil
+    waitUntil(
+      syncPortal(portalId).catch(err =>
+        console.error(`Sync failed for portal ${portalId}:`, err)
+      )
     );
 
     return NextResponse.json({ started: true, portalId });
