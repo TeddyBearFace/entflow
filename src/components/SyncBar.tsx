@@ -110,11 +110,22 @@ export default function SyncBar({
   }, [phase, poll]);
 
   // Check on mount if a sync is already in progress
+  const hasCheckedRef = useRef(false);
   useEffect(() => {
-    poll().then(() => {
-      updateCooldown();
-    });
-  }, [poll, updateCooldown]);
+    if (hasCheckedRef.current) return;
+    hasCheckedRef.current = true;
+    fetch(`/api/sync-status?portalId=${portalId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.status === "SYNCING") {
+          setSyncStatus(data);
+          setPhase("syncing");
+        }
+        if (data.lastSyncedAt) setLastSynced(data.lastSyncedAt);
+        updateCooldown();
+      })
+      .catch(() => {});
+  }, [portalId]);
 
   // Handle "done" phase
   useEffect(() => {
