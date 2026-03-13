@@ -8,6 +8,7 @@ const PUBLIC_ROUTES = [
   "/termsofservice",
   "/privacy",
   "/pricing",
+  "/analyst",
   "/api",  // All API routes handle their own auth
 ];
 
