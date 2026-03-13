@@ -77,8 +77,16 @@ export async function POST(request: NextRequest) {
         });
       })
     );
-  }
 
+    return NextResponse.json({ started: true, portalId });
+  } catch (err) {
+    console.error("Sync error:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Sync failed" },
+      { status: 500 }
+    );
+  }
+}
 
 // GET /api/sync?portalId=xxx
 // Get sync status and history for a portal.
