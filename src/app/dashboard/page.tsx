@@ -122,7 +122,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         {/* Upgrade banner for free users */}
         {portal.planTier === "FREE" && totalWorkflows > 0 && (
-          <div className="mb-6 px-5 py-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex items-center justify-between">
+          <div className="mb-6 px-5 py-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <span className="text-2xl">⚡</span>
               <div>
@@ -189,7 +189,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         {/* Quick actions */}
         {totalWorkflows > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-8">
             <Link
               href={`/map?portal=${portalId}`}
               className="group block p-5 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all"
@@ -243,7 +243,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 Workflows with the most dependencies — these are the ones to watch.
               </p>
             </div>
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <th className="px-6 py-3">Workflow</th>
@@ -300,6 +301,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 })}
               </tbody>
             </table>
+          </div>
           </div>
         )}
 

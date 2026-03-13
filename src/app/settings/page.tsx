@@ -79,7 +79,7 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <NavBar portalId={portalId} portalName={portal?.name || undefined} />
 
-      <main className="flex-1 max-w-3xl mx-auto px-6 py-10 w-full">
+      <main className="flex-1 max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10 w-full">
         <h1 className="text-2xl font-bold text-gray-900 mb-8">My Account</h1>
 
         {loading ? (

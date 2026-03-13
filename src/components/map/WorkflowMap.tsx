@@ -52,7 +52,6 @@ interface WorkflowMapProps {
 export default function WorkflowMap({ portalId, portalName }: WorkflowMapProps) {
   return (
     <>
-      {/* Mobile: show desktop prompt */}
       <div className="flex md:hidden items-center justify-center h-full px-6">
         <div className="text-center max-w-sm">
           <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
@@ -67,7 +66,6 @@ export default function WorkflowMap({ portalId, portalName }: WorkflowMapProps) 
           </a>
         </div>
       </div>
-      {/* Desktop: full map */}
       <div className="hidden md:flex flex-1 h-full">
         <ReactFlowProvider>
           <WorkflowMapInner portalId={portalId} portalName={portalName} />

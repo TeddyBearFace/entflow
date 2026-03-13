@@ -83,7 +83,7 @@ export default async function ConnectPage({ searchParams }: { searchParams: { er
         </div>
       )}
 
-      <main className="flex-1 flex items-center justify-center px-6 pb-12">
+      <main className="flex-1 flex items-center justify-center px-4 pb-12">
         <div className="max-w-4xl w-full grid md:grid-cols-2 gap-12 items-center">
           <div>
             <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full px-3 py-1 mb-4">
