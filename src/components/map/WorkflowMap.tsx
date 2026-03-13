@@ -26,7 +26,7 @@ import WorkflowDetailPanel from "./WorkflowDetailPanel";
 import ExportPanel from "./ExportPanel";
 import CanvasToolbar, { type CanvasTool } from "./CanvasToolbar";
 import { computeSnapAndGuides, SmartGuideLines } from "./SmartGuides";
-import SyncProgress from "@/components/SyncProgress";
+import SyncBar from "@/components/SyncBar";
 import ProGate, { ProBadge } from "@/components/ProGate";
 import { usePlan } from "@/hooks/usePlan";
 import type { MapFilters, WorkflowNodeData } from "@/types";
@@ -914,9 +914,13 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
       <div className="flex-1 relative flex flex-col">
         {/* Sync progress bar */}
         <div className="flex-shrink-0">
-          {isSyncing && (
-            <SyncProgress key={syncKey} portalId={portalId} onComplete={() => { setIsSyncing(false); if (isFree) { lastSyncedRef.current = new Date().toISOString(); setSyncCooldownMs(2 * 60 * 60 * 1000); } fetchGraph(); }} compact />
-          )}
+          <SyncBar
+  portalId={portalId}
+  planTier={plan?.id}
+  onSyncComplete={fetchGraph}
+  compact
+/>
+          
         </div>
         <div className="flex-1 relative">
         <ReactFlow
@@ -984,13 +988,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                 📋 Changelog
               </a>
               {/* Manual sync */}
-              <button onClick={triggerSync} disabled={isSyncing || syncOnCooldown}
-                title={syncOnCooldown ? "Free plan: sync once every 2h. Upgrade to Pro for unlimited syncs." : undefined}
-                className={`backdrop-blur-sm rounded-lg shadow-sm border px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                  isSyncing ? "bg-blue-50 border-blue-200 text-blue-600 cursor-wait"
-                  : syncOnCooldown ? "bg-white/90 border-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-white/90 border-gray-200 text-gray-600 hover:text-gray-800 hover:border-gray-300"
-                }`}>
+              
                 {isSyncing ? (
                   <><div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-blue-300 border-t-blue-600" /> Syncing...</>
                 ) : syncOnCooldown ? (

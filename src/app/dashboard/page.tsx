@@ -1,9 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import DisconnectButton from "@/components/DisconnectButton";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
-import DashboardSyncBanner from "@/components/DashboardSyncBanner";
+import SyncBar from "@/components/SyncBar";
 import UpgradeButton from "@/components/UpgradeButton";
 import { getPlan } from "@/lib/plans";
 
@@ -111,7 +110,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       <main className="max-w-6xl mx-auto px-6 py-8">
         {/* Sync progress */}
-        <DashboardSyncBanner portalId={portalId} isSyncing={isSyncing} justConnected={justConnected} syncStatus={portal.syncStatus} syncMessage={portal.syncMessage} planTier={portal.planTier} lastSyncedAt={portal.lastSyncedAt?.toISOString() || null} />
+        <div className="mb-6">
+  <SyncBar
+    portalId={portalId}
+    planTier={portal.planTier}
+    lastSyncedAt={portal.lastSyncedAt?.toISOString() || null}
+    initialStatus={portal.syncStatus}
+    initialMessage={portal.syncMessage}
+    onSyncComplete={() => window.location.reload()}
+  />
+</div>
 
         {/* Upgrade banner for free users */}
         {portal.planTier === "FREE" && totalWorkflows > 0 && (
@@ -321,7 +329,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <p className="text-xs text-gray-400">
             Portal: {portal.name || portal.hubspotPortalId} · Plan: {portal.planTier}
           </p>
-          <DisconnectButton portalId={portalId} portalName={portal.name || portal.hubspotPortalId} />
+          <Link href={`/pricing?portal=${portalId}`} className="text-xs text-gray-500 hover:text-gray-700">
+            Manage Plan
+          </Link>
         </div>
       </main>
     </div>

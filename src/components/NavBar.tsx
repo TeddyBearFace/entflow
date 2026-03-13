@@ -99,6 +99,18 @@ export default function NavBar({ portalId, portalName }: NavBarProps) {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
                       Connect new portal
                     </Link>
+                    <button onClick={async () => {
+                      if (!confirm(`Disconnect ${portalName || 'this portal'}? Your data will be preserved.`)) return;
+                      setShowSwitcher(false);
+                      try {
+                        await fetch("/api/portals/disconnect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ portalId: pid }) });
+                        router.push("/connect");
+                      } catch {}
+                    }}
+                      className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors font-medium">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                      Disconnect portal
+                    </button>
                   </div>
                 </div>
               </>
