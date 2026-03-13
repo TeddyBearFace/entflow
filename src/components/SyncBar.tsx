@@ -109,7 +109,7 @@ export default function SyncBar({
     }
   }, [phase, poll]);
 
-  // Check on mount if a sync is already in progress
+  /// Check on mount if a sync is already in progress
   const hasCheckedRef = useRef(false);
   useEffect(() => {
     if (hasCheckedRef.current) return;
@@ -121,11 +121,17 @@ export default function SyncBar({
           setSyncStatus(data);
           setPhase("syncing");
         }
-        if (data.lastSyncedAt) setLastSynced(data.lastSyncedAt);
-        updateCooldown();
+        if (data.lastSyncedAt) {
+          setLastSynced(data.lastSyncedAt);
+          // Calculate cooldown directly from response data
+          if (isFree) {
+            const elapsed = Date.now() - new Date(data.lastSyncedAt).getTime();
+            setCooldownMs(Math.max(0, FREE_COOLDOWN_MS - elapsed));
+          }
+        }
       })
       .catch(() => {});
-  }, [portalId]);
+  }, [portalId, isFree]);
 
   // Handle "done" phase
   useEffect(() => {
