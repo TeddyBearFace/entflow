@@ -243,7 +243,7 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
           let al="Association"; if(t?.associationCategory) al=t.associationCategory==="HUBSPOT_DEFINED"?"HubSpot defined":t.associationCategory; if(t?.associationTypeId) al+=` (Type ${t.associationTypeId})`;
           d.push({label:al,value:v?.type==="ENROLLED_OBJECT"?"Enrolled record":v?.type||"Linked record",section:"Associations"});
         }}
-        summary=pts.length>0?pts.join(" · "):"Create task"; break;
+        summary=pts.length>0?pts.join(" Â· "):"Create task"; break;
       }
       case "0-1": {
         hk.add("delayMillis"); hk.add("delay_millis"); hk.add("delta"); hk.add("timeUnit");
@@ -799,7 +799,7 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
         {/* Enrollment */}
         {et.length>0 && <div className="px-4 py-3 border-b border-gray-100">
           <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">\ud83d\udce5 Enrollment Trigger</h5>
-          <div className="space-y-1">{et.map((l,i) => <div key={i} className="flex items-start gap-2"><span className="text-gray-300 mt-px">•</span><p className="text-xs text-gray-700 leading-relaxed">{l}</p></div>)}</div>
+          <div className="space-y-1">{et.map((l,i) => <div key={i} className="flex items-start gap-2"><span className="text-gray-300 mt-px">â€¢</span><p className="text-xs text-gray-700 leading-relaxed">{l}</p></div>)}</div>
         </div>}
         {/* Actions */}
         {pa.length>0 && <div className="px-4 py-3 border-b border-gray-100">
