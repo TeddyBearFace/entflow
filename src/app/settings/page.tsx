@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import NavBar from "@/components/NavBar";
 
@@ -18,6 +19,7 @@ interface PlanInfo {
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const portalId = searchParams.get("portal") || "";
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [portal, setPortal] = useState<any>(null);
@@ -55,22 +57,15 @@ export default function SettingsPage() {
 
   const handleLogout = useCallback(async () => {
     setActionLoading("logout");
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/connect");
-    } catch {}
-    finally { setActionLoading(null); }
-  }, [router]);
+    await signOut({ callbackUrl: "/login" });
+  }, []);
 
   const handleDisconnect = useCallback(async () => {
     if (!confirm("Disconnect this HubSpot portal? All synced data, canvas elements, tags, and changelog entries will be permanently deleted.")) return;
     setActionLoading("disconnect");
     try {
       const res = await fetch(`/api/portals?portalId=${portalId}`, { method: "DELETE" });
-      if (res.ok) {
-        await fetch("/api/auth/logout", { method: "POST" });
-        router.push("/connect");
-      }
+      if (res.ok) router.push("/connect");
     } catch {}
     finally { setActionLoading(null); }
   }, [portalId, router]);
@@ -85,7 +80,7 @@ export default function SettingsPage() {
       <NavBar portalId={portalId} portalName={portal?.name || undefined} />
 
       <main className="flex-1 max-w-3xl mx-auto px-6 py-10 w-full">
-        <h1 className="text-2xl font-bold text-gray-900 mb-8">Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-8">My Account</h1>
 
         {loading ? (
           <div className="flex justify-center py-20">
@@ -93,6 +88,26 @@ export default function SettingsPage() {
           </div>
         ) : (
           <div className="space-y-6">
+
+            {/* Profile */}
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h2 className="text-sm font-bold text-gray-900">Profile</h2>
+              </div>
+              <div className="px-6 py-5">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                    {session?.user?.name?.[0]?.toUpperCase() || session?.user?.email?.[0]?.toUpperCase() || "?"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {session?.user?.name && (
+                      <p className="text-sm font-semibold text-gray-900 truncate">{session.user.name}</p>
+                    )}
+                    <p className="text-sm text-gray-500 truncate">{session?.user?.email || "—"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Current Plan */}
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -225,13 +240,13 @@ export default function SettingsPage() {
             {/* Account Actions */}
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100">
-                <h2 className="text-sm font-bold text-gray-900">Account</h2>
+                <h2 className="text-sm font-bold text-gray-900">Session</h2>
               </div>
-              <div className="px-6 py-4 space-y-3">
+              <div className="px-6 py-4">
                 <div className="flex items-center justify-between py-2">
                   <div>
                     <p className="text-sm font-medium text-gray-800">Log out</p>
-                    <p className="text-xs text-gray-500">Sign out of this portal. You can log back in via HubSpot OAuth.</p>
+                    <p className="text-xs text-gray-500">Sign out of Entflow on this device.</p>
                   </div>
                   <button onClick={handleLogout} disabled={actionLoading === "logout"}
                     className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">

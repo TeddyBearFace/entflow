@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { signOut } from "next-auth/react";
 
 interface Portal { id: string; hubspotPortalId: string; name: string | null; }
 
@@ -34,23 +35,13 @@ export default function NavBar({ portalId, portalName }: NavBarProps) {
 
   useEffect(() => { fetchPortals(); }, [fetchPortals]);
 
-  const switchPortal = async (newPortalId: string) => {
+  const switchPortal = (newPortalId: string) => {
     setShowSwitcher(false);
-    try {
-      await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ portalId: newPortalId }),
-      });
-    } catch {}
     router.push(`${pathname || "/dashboard"}?portal=${newPortalId}`);
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/connect");
-    } catch {}
+  const handleLogout = () => {
+    signOut({ callbackUrl: "/login" });
   };
 
   return (
@@ -136,7 +127,7 @@ export default function NavBar({ portalId, portalName }: NavBarProps) {
           <span className="w-px h-5 bg-gray-200 mx-1" />
           <Link href={`/settings?portal=${pid}`}
             className={`px-2.5 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${pathname === "/settings" ? "text-blue-700 bg-blue-50" : "text-gray-400 hover:text-gray-700 hover:bg-gray-50"}`}
-            title="Settings">
+            title="My Account">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
