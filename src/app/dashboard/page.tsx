@@ -111,15 +111,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       <main className="max-w-6xl mx-auto px-6 py-8">
         {/* Sync progress */}
         <div className="mb-6">
-  <SyncBar
-    portalId={portalId}
-    planTier={portal.planTier}
-    lastSyncedAt={portal.lastSyncedAt?.toISOString() || null}
-    initialStatus={portal.syncStatus}
-    initialMessage={portal.syncMessage}
-    onSyncComplete={() => window.location.reload()}
-  />
-</div>
+          <SyncBar
+            portalId={portalId}
+            planTier={portal.planTier}
+            lastSyncedAt={portal.lastSyncedAt?.toISOString() || null}
+            initialStatus={portal.syncStatus}
+            initialMessage={portal.syncMessage}
+          />
+        </div>
 
         {/* Upgrade banner for free users */}
         {portal.planTier === "FREE" && totalWorkflows > 0 && (

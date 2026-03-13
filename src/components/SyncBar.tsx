@@ -1,147 +1,317 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import SyncProgress from "@/components/SyncProgress";
 
-const FREE_SYNC_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2 hours
+interface SyncStatus {
+  status: string;
+  progress: number;
+  total: number;
+  message: string;
+  percent: number;
+  lastSyncedAt: string | null;
+}
 
-interface Props {
+interface SyncBarProps {
   portalId: string;
-  isSyncing: boolean;
-  justConnected: boolean;
-  syncStatus?: string;
-  syncMessage?: string | null;
   planTier?: string;
   lastSyncedAt?: string | null;
+  initialStatus?: string;
+  initialMessage?: string | null;
+  onSyncComplete?: () => void;
+  /** Compact mode for embedding in map toolbar */
+  compact?: boolean;
 }
 
-function getCooldownRemaining(lastSyncedAt: string | null | undefined): number {
-  if (!lastSyncedAt) return 0;
-  const elapsed = Date.now() - new Date(lastSyncedAt).getTime();
-  return Math.max(0, FREE_SYNC_COOLDOWN_MS - elapsed);
-}
+const FREE_COOLDOWN_MS = 2 * 60 * 60 * 1000;
 
 function formatCountdown(ms: number): string {
   const totalMin = Math.ceil(ms / 60000);
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-export default function DashboardSyncBanner({ portalId, isSyncing: serverSyncing, justConnected, syncStatus, syncMessage, planTier, lastSyncedAt }: Props) {
-  const router = useRouter();
-  const [syncing, setSyncing] = useState(serverSyncing || justConnected || syncStatus === "SYNCING");
-  const [syncKey, setSyncKey] = useState(0);
+function timeAgo(dateStr: string): string {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+/**
+ * Unified sync bar used on both dashboard and map.
+ *
+ * States:
+ * - idle: shows "Sync Now" button + last sync time
+ * - syncing: shows progress bar with real percentage
+ * - failed: shows error with retry button
+ * - disconnected: shows reconnect prompt
+ * - cooldown: shows countdown (free tier)
+ */
+export default function SyncBar({
+  portalId,
+  planTier,
+  lastSyncedAt: initialLastSynced,
+  initialStatus,
+  initialMessage,
+  onSyncComplete,
+  compact = false,
+}: SyncBarProps) {
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [phase, setPhase] = useState<"idle" | "syncing" | "done">(
+    initialStatus === "SYNCING" ? "syncing" : "idle"
+  );
+  const [cooldownMs, setCooldownMs] = useState(0);
+  const [lastSynced, setLastSynced] = useState(initialLastSynced || null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+  const doneTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isFree = !planTier || planTier === "FREE";
-  const [cooldownMs, setCooldownMs] = useState(() => isFree ? getCooldownRemaining(lastSyncedAt) : 0);
-  const onCooldown = isFree && cooldownMs > 0;
 
-  // Tick the cooldown timer
+  // Calculate cooldown
+  const updateCooldown = useCallback(() => {
+    if (!isFree || !lastSynced) {
+      setCooldownMs(0);
+      return;
+    }
+    const elapsed = Date.now() - new Date(lastSynced).getTime();
+    setCooldownMs(Math.max(0, FREE_COOLDOWN_MS - elapsed));
+  }, [isFree, lastSynced]);
+
+  // Poll sync status
+  const poll = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/sync-status?portalId=${portalId}`);
+      if (!res.ok) return;
+      const data: SyncStatus = await res.json();
+      setSyncStatus(data);
+
+      if (data.status === "SYNCING") {
+        setPhase("syncing");
+      } else if (data.status === "COMPLETED" || data.status === "FAILED") {
+        if (data.lastSyncedAt) setLastSynced(data.lastSyncedAt);
+        setPhase("done");
+      }
+    } catch {}
+  }, [portalId]);
+
+  // Start polling when syncing
+  useEffect(() => {
+    if (phase === "syncing") {
+      poll(); // immediate first poll
+      intervalRef.current = setInterval(poll, 1000);
+      return () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      };
+    }
+  }, [phase, poll]);
+
+  // Check on mount if a sync is already in progress
+  useEffect(() => {
+    poll().then(() => {
+      updateCooldown();
+    });
+  }, [poll, updateCooldown]);
+
+  // Handle "done" phase
+  useEffect(() => {
+    if (phase === "done") {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      updateCooldown();
+      doneTimeoutRef.current = setTimeout(() => {
+        setPhase("idle");
+        onSyncComplete?.();
+      }, 1500);
+      return () => {
+        if (doneTimeoutRef.current) clearTimeout(doneTimeoutRef.current);
+      };
+    }
+  }, [phase, onSyncComplete, updateCooldown]);
+
+  // Cooldown ticker
   useEffect(() => {
     if (!isFree || cooldownMs <= 0) return;
-    const timer = setInterval(() => {
-      const remaining = getCooldownRemaining(lastSyncedAt);
-      setCooldownMs(remaining);
-      if (remaining <= 0) clearInterval(timer);
-    }, 30000);
-    return () => clearInterval(timer);
-  }, [isFree, cooldownMs, lastSyncedAt]);
+    cooldownRef.current = setInterval(updateCooldown, 30000);
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, [isFree, cooldownMs, updateCooldown]);
 
-  const isDisconnected = syncStatus === "FAILED" && syncMessage?.includes("disconnected");
-  const isFailed = syncStatus === "FAILED" && !isDisconnected;
-
+  // Trigger sync
   const triggerSync = useCallback(async () => {
-    if (onCooldown) return;
-    setSyncing(true);
-    setSyncKey(k => k + 1);
+    if (phase === "syncing") return;
+    setPhase("syncing");
+    setSyncStatus(null);
     try {
-      await fetch("/api/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ portalId }) });
+      await fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ portalId }),
+      });
     } catch (err) {
       console.error("Sync trigger failed:", err);
     }
-  }, [portalId, onCooldown]);
+  }, [portalId, phase]);
 
-  const handleComplete = useCallback(() => {
-    setSyncing(false);
-    if (isFree) setCooldownMs(FREE_SYNC_COOLDOWN_MS);
-    router.refresh();
-  }, [router, isFree]);
+  const onCooldown = isFree && cooldownMs > 0;
+  const isDisconnected =
+    syncStatus?.status === "FAILED" &&
+    syncStatus?.message?.includes("disconnected");
+  const isFailed =
+    phase === "done" &&
+    syncStatus?.status === "FAILED" &&
+    !isDisconnected;
+  const isComplete = phase === "done" && syncStatus?.status === "COMPLETED";
+  const isSyncing = phase === "syncing";
 
-  const handleUpgrade = useCallback((e?: React.MouseEvent) => {
-    if (e) e.preventDefault();
-    window.location.href = `/pricing?portal=${portalId}`;
-  }, [portalId]);
+  const percent = syncStatus?.percent || 0;
+  const progress = syncStatus?.progress || 0;
+  const total = syncStatus?.total || 0;
+  const message = syncStatus?.message || "Starting sync...";
 
-  if (syncing) {
-    return <div className="mb-6"><SyncProgress key={syncKey} portalId={portalId} onComplete={handleComplete} /></div>;
-  }
-
+  // ── Disconnected ────────────────────────────────────────────
   if (isDisconnected) {
     return (
-      <div className="mb-6 px-5 py-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl" role="img" aria-label="disconnected">{"🔌"}</span>
-          <div>
-            <p className="text-sm font-bold text-red-900">HubSpot Disconnected</p>
-            <p className="text-xs text-red-700 mt-0.5">Your HubSpot app has been disconnected. Reconnect to resume syncing.</p>
-          </div>
+      <div className={`flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl ${compact ? "text-xs" : ""}`}>
+        <span className="text-lg">🔌</span>
+        <div className="flex-1 min-w-0">
+          <p className={`font-bold text-red-900 ${compact ? "text-xs" : "text-sm"}`}>HubSpot Disconnected</p>
+          {!compact && (
+            <p className="text-xs text-red-700 mt-0.5">Reconnect to resume syncing.</p>
+          )}
         </div>
-        <Link href="/api/auth/hubspot" className="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-orange-500 hover:shadow-md transition-all">
-          Reconnect HubSpot
+        <Link
+          href="/api/auth/hubspot"
+          className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-orange-500 hover:shadow-md transition-all"
+        >
+          Reconnect
         </Link>
       </div>
     );
   }
 
+  // ── Syncing ─────────────────────────────────────────────────
+  if (isSyncing) {
+    return (
+      <div className={`bg-blue-50 border border-blue-200 rounded-xl overflow-hidden ${compact ? "" : ""}`}>
+        {/* Top row: message + stats */}
+        <div className="flex items-center gap-3 px-4 py-2.5">
+          <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-300 border-t-blue-600 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className={`font-medium text-blue-800 truncate ${compact ? "text-xs" : "text-sm"}`}>
+              {message}
+            </p>
+          </div>
+          {total > 0 && (
+            <span className="text-xs font-mono text-blue-600 flex-shrink-0 tabular-nums">
+              {progress}/{total}
+            </span>
+          )}
+          {percent > 0 && (
+            <span className="text-xs font-bold text-blue-700 flex-shrink-0 tabular-nums">
+              {percent}%
+            </span>
+          )}
+        </div>
+        {/* Progress bar — full width, fixed height, never changes container size */}
+        <div className="h-1.5 bg-blue-100">
+          <div
+            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 ease-out"
+            style={{ width: `${Math.max(percent, 2)}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Just completed ──────────────────────────────────────────
+  if (isComplete) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+        <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+        <p className={`font-medium text-emerald-800 ${compact ? "text-xs" : "text-sm"}`}>
+          Sync complete — {total} workflow{total !== 1 ? "s" : ""} synced
+        </p>
+      </div>
+    );
+  }
+
+  // ── Failed ──────────────────────────────────────────────────
   if (isFailed) {
     return (
-      <div className="mb-6 px-5 py-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl" role="img" aria-label="warning">{"⚠️"}</span>
-          <div>
-            <p className="text-sm font-bold text-amber-900">Last sync failed</p>
-            <p className="text-xs text-amber-700 mt-0.5 max-w-md truncate">{syncMessage || "Unknown error"}</p>
-          </div>
+      <div className={`flex items-center gap-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl ${compact ? "text-xs" : ""}`}>
+        <span className="text-base">⚠️</span>
+        <div className="flex-1 min-w-0">
+          <p className={`font-bold text-amber-900 ${compact ? "text-xs" : "text-sm"}`}>Sync failed</p>
+          {!compact && syncStatus?.message && (
+            <p className="text-xs text-amber-700 mt-0.5 truncate">{syncStatus.message}</p>
+          )}
         </div>
-        <button onClick={triggerSync} disabled={onCooldown}
-          className="flex-shrink-0 text-sm font-medium text-amber-700 hover:text-amber-800 px-3 py-1.5 rounded-md hover:bg-amber-100 transition-colors disabled:opacity-50">
-          {onCooldown ? `Retry in ${formatCountdown(cooldownMs)}` : "Retry Sync"}
+        <button
+          onClick={triggerSync}
+          className="flex-shrink-0 text-xs font-semibold text-amber-700 hover:text-amber-800 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors"
+        >
+          Retry
         </button>
       </div>
     );
   }
 
+  // ── Idle ────────────────────────────────────────────────────
   return (
-    <div className="mb-6 flex items-center justify-between px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-      <div className="flex items-center gap-3">
-        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-        <div>
-          <span className="text-sm text-gray-600">
-            {onCooldown
-              ? <>Next sync available in <span className="font-medium text-gray-800">{formatCountdown(cooldownMs)}</span></>
-              : "Pull latest workflow changes from HubSpot"
-            }
-          </span>
-          {isFree && onCooldown && (
-            <p className="text-[10px] text-gray-400 mt-0.5">Free plan: sync once every 2h. <a href="#" onClick={handleUpgrade} className="text-blue-500 hover:text-blue-600 font-medium">Upgrade to Pro</a> for unlimited syncs.</p>
-          )}
-          {isFree && !onCooldown && (
-            <p className="text-[10px] text-gray-400 mt-0.5">Free plan: sync once every 2h. Pro users get unlimited syncs.</p>
-          )}
-        </div>
+    <div className={`flex items-center gap-3 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl ${compact ? "" : ""}`}>
+      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      <div className="flex-1 min-w-0">
+        {onCooldown ? (
+          <>
+            <span className={`text-gray-600 ${compact ? "text-xs" : "text-sm"}`}>
+              Next sync in <span className="font-semibold text-gray-800">{formatCountdown(cooldownMs)}</span>
+            </span>
+            {!compact && (
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                Free plan: 2h cooldown.{" "}
+                <Link href={`/pricing?portal=${portalId}`} className="text-blue-500 hover:text-blue-600 font-medium">
+                  Upgrade for unlimited
+                </Link>
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <span className={`text-gray-600 ${compact ? "text-xs" : "text-sm"}`}>
+              {lastSynced
+                ? <>Last synced <span className="font-medium text-gray-800">{timeAgo(lastSynced)}</span></>
+                : "Ready to sync"
+              }
+            </span>
+            {!compact && isFree && (
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                Free plan: sync every 2h.{" "}
+                <Link href={`/pricing?portal=${portalId}`} className="text-blue-500 hover:text-blue-600 font-medium">
+                  Upgrade to Pro
+                </Link>{" "}
+                for unlimited.
+              </p>
+            )}
+          </>
+        )}
       </div>
-      <button onClick={triggerSync} disabled={onCooldown}
-        className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors flex-shrink-0 ${
+      <button
+        onClick={triggerSync}
+        disabled={onCooldown}
+        className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
           onCooldown
             ? "text-gray-400 cursor-not-allowed"
             : "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-        }`}>
+        }`}
+      >
         {onCooldown ? `⏳ ${formatCountdown(cooldownMs)}` : "Sync Now"}
       </button>
     </div>
