@@ -268,7 +268,7 @@ export default function FilterSidebar({
       </div>
 
       {/* Status */}
-      <Section title="🟢 Status" defaultOpen={false}
+      <Section title="Status" icon={<svg className="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" strokeWidth={2} /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" /></svg>} defaultOpen={false}
         count={filters.status.length}>
         <div className="px-4 space-y-1">
           {STATUS_OPTIONS.map(opt => (
@@ -284,7 +284,7 @@ export default function FilterSidebar({
 
       {/* Object Type */}
       {stats?.objectTypes && stats.objectTypes.length > 0 && (
-        <Section title="📦 Object Type" defaultOpen={false}
+        <Section title="Object Type" icon={<svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>} defaultOpen={false}
           count={filters.objectTypes.length}>
           <div className="px-4 space-y-1">
             {stats.objectTypes.map((type: string) => (
@@ -299,7 +299,7 @@ export default function FilterSidebar({
       )}
 
       {/* Dependency Type */}
-      <Section title="🔗 Dependencies" defaultOpen={false}
+      <Section title="Dependencies" icon={<svg className="w-3.5 h-3.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101" /></svg>} defaultOpen={false}
         count={filters.dependencyTypes.length}>
         <div className="px-4 space-y-1">
           {DEPENDENCY_TYPE_OPTIONS.map(opt => (
@@ -314,7 +314,7 @@ export default function FilterSidebar({
       </Section>
 
       {/* ═══════ Tags ═══════ */}
-      <Section title="🏷️ Tags" defaultOpen={tags.length > 0}
+      <Section title="Tags" defaultOpen={tags.length > 0}
         count={filters.tags.length}
         icon={<svg className="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>}>
         <ProGate allowed={!canUse || canUse("tagging")} portalId={portalId} feature="Workflow tagging">
