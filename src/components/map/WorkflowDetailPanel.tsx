@@ -171,14 +171,14 @@ function parseActions(raw: any, sl: any, sol: any, pl: any, el: Record<string, {
         const pn = f.property_name||f.propertyName; hk.add("property_name"); hk.add("propertyName"); hk.add("value");
         if (pn) { const dn = fp(pn); let rv2=""; const v=f.value; if (v?.staticValue) rv2=String(v.staticValue); else if (typeof v==="string") rv2=v;
           const isTV = isTemplateVar(rv2); const res = isTV ? tv(rv2) : rv2 ? rv(rv2,pn,sl,sol,pl) : "";
-          summary=res?`${dn} ? ${res}`:dn;
+          summary=res?`${dn} → ${res}`:dn;
           d.push({label:"Property",value:dn,section:"Configuration"}); if(res) d.push({label:"New value",value:res,section:"Configuration"});
           if(rv2&&rv2!==res) d.push({label:"Raw value",value:rv2,section:"Technical"}); d.push({label:"Internal name",value:pn,section:"Technical"});
         } break;
       }
       case "0-6": {
         const s2=f.source_property, t2=f.target_property||f.property_name; hk.add("source_property"); hk.add("target_property"); hk.add("property_name");
-        summary=s2&&t2?`${fp(s2)} ? ${fp(t2)}`:label;
+        summary=s2&&t2?`${fp(s2)} → ${fp(t2)}`:label;
         if(s2) { d.push({label:"Source property",value:fp(s2),section:"Configuration"}); d.push({label:"Source (internal)",value:s2,section:"Technical"}); }
         if(t2) { d.push({label:"Target property",value:fp(t2),section:"Configuration"}); d.push({label:"Target (internal)",value:t2,section:"Technical"}); }
         break;
@@ -408,8 +408,8 @@ function ActionStep({ action, isExpanded, onToggle }: { action: ParsedAction; is
           </div>
           <p className="text-[11px] mt-1 opacity-80 leading-snug break-words flex flex-wrap items-center gap-0.5">
             {(() => {
-              if (action.summary.includes(" ? ")) {
-                const [left, right] = [action.summary.split(" ? ")[0], action.summary.split(" ? ").slice(1).join(" ? ")];
+              if (action.summary.includes(" → ")) {
+                const [left, right] = [action.summary.split(" ? ")[0], action.summary.split(" → ").slice(1).join(" ? ")];
                 const parsed = parseDynRef(right);
                 if (parsed) return <>{left} ? <ObjTag name={parsed.obj} /><span> {parsed.prop}</span></>;
               }
@@ -607,7 +607,7 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
                 <button key={tag.id} onClick={() => toggleWorkflowTag(tag.id)}
                   className="text-[10px] font-semibold px-2 py-0.5 rounded-md transition-all"
                   style={{ backgroundColor: isAssigned ? tag.color : `${tag.color}12`, color: isAssigned ? "white" : `${tag.color}80`, border: `1.5px solid ${isAssigned ? tag.color : `${tag.color}25`}` }}>
-                  {isAssigned && "? "}{tag.name}
+                  {isAssigned && "✓ "}{tag.name}
                 </button>
               );
             })}
@@ -660,14 +660,14 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
           )}
 
           {localScore && localScore.issues.length === 0 && (
-            <p className="text-[11px] text-emerald-600 mb-3">No issues in quick scan ?</p>
+            <p className="text-[11px] text-emerald-600 mb-3">No issues in quick scan ✓</p>
           )}
 
           {/* AI deep analysis */}
           {isFree ? (
             <a href={`/pricing?portal=${portalId}`}
               className="block w-full text-center px-3 py-2 rounded-lg text-[11px] font-semibold border-2 border-dashed border-violet-200 text-violet-500 hover:bg-violet-50 transition-colors">
-              Upgrade for AI deep analysis ?
+              Upgrade for AI deep analysis →
             </a>
           ) : !aiResult ? (
             <div>
@@ -710,7 +710,7 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
                           <div className="min-w-0">
                             <p className="text-[11px] font-semibold text-gray-900">{issue.title}</p>
                             <p className="text-[10px] text-gray-500 mt-0.5 leading-relaxed">{issue.detail}</p>
-                            <p className="text-[10px] text-violet-600 mt-1 font-medium">Fix ? {issue.suggestion}</p>
+                            <p className="text-[10px] text-violet-600 mt-1 font-medium">Fix → {issue.suggestion}</p>
                           </div>
                         </div>
                       </div>
@@ -724,7 +724,7 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
                   <div className="space-y-1">
                     {aiResult.optimizations.map((opt, i) => (
                       <div key={i} className="flex items-start gap-1.5 text-[11px]">
-                        <span className="text-violet-500 mt-px flex-shrink-0">?</span>
+                        <span className="text-violet-500 mt-px flex-shrink-0">◆</span>
                         <span className="text-gray-600 leading-relaxed">{opt}</span>
                       </div>
                     ))}
@@ -732,7 +732,7 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
                 </div>
               )}
               <button onClick={runAiAnalysis} disabled={aiLoading} className="text-[10px] text-violet-600 hover:text-violet-700 font-medium disabled:opacity-50">
-                {aiLoading ? "Analysing..." : "Re-analyse ?"}
+                {aiLoading ? "Analysing..." : "Re-analyse ↻"}
               </button>
             </div>
           )}
