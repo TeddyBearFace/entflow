@@ -18,11 +18,11 @@ export default function NavBar({ portalId, portalName }: NavBarProps) {
   const [showSwitcher, setShowSwitcher] = useState(false);
 
   const links = [
-    { href: `/dashboard?portal=${pid}`, label: "Dashboard", icon: "📊", match: "/dashboard" },
-    { href: `/map?portal=${pid}`, label: "Map", icon: "🗺️", match: "/map" },
-    { href: `/analyst?portal=${pid}`, label: "AI Analyst", icon: "🔬", match: "/analyst" },
-    { href: `/changelog?portal=${pid}`, label: "Changelog", icon: "📋", match: "/changelog" },
-    { href: `/documentation`, label: "Docs", icon: "📖", match: "/documentation" },
+    { href: `/dashboard?portal=${pid}`, label: "Dashboard", match: "/dashboard" },
+    { href: `/map?portal=${pid}`, label: "Map", match: "/map" },
+    { href: `/analyst?portal=${pid}`, label: "AI Analyst", match: "/analyst" },
+    { href: `/changelog?portal=${pid}`, label: "Changelog", match: "/changelog" },
+    { href: `/documentation`, label: "Docs", match: "/documentation" },
   ];
 
   const fetchPortals = useCallback(async () => {
@@ -127,8 +127,7 @@ export default function NavBar({ portalId, portalName }: NavBarProps) {
               const isActive = pathname === link.match;
               return (
                 <Link key={link.href} href={link.href}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${isActive ? "text-blue-700 bg-blue-50" : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"}`}>
-                  <span className="text-xs">{link.icon}</span>
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${isActive ? "text-blue-700 bg-blue-50" : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"}`}>
                   {link.label}
                 </Link>
               );

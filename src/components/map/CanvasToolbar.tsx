@@ -87,9 +87,15 @@ export default function CanvasToolbar({ activeTool, onToolChange, activeColor, o
               title={isLocked ? `${tool.label} — Pro plan` : tool.label}
             >
               {tool.icon}
+              {/* Pro badge */}
+              {isLocked && (
+                <span className="absolute -top-1 -right-1 px-1 py-px bg-violet-600 text-white text-[7px] font-bold rounded-full leading-none uppercase tracking-wide">
+                  Pro
+                </span>
+              )}
               {/* Tooltip */}
               <span className="absolute -top-9 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-[10px] font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                {tool.label}{isLocked ? " ⚡ Pro" : ""}
+                {tool.label}{isLocked ? " · Pro" : ""}
               </span>
             </button>
           </div>
