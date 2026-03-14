@@ -1123,9 +1123,9 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                       <button onClick={runLifecycleSort} disabled={sequenceLoading}
                         className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-violet-50 hover:text-violet-700 flex items-center gap-2 transition-colors disabled:opacity-50">
                         {sequenceLoading ? (
-                          <><div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-violet-300 border-t-violet-600" /> Sorting...</>
+                          <><div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-violet-300 border-t-violet-600" /> Mapping flow...</>
                         ) : (
-                          <>🔄 AI Lifecycle Sort</>
+                          <>🔄 Flow Timeline</>
                         )}
                       </button>
                       <div className="border-t border-gray-100 my-1" />
@@ -1366,8 +1366,8 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         <div className="w-80 border-l border-gray-200 bg-white flex flex-col flex-shrink-0">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <div>
-              <h3 className="font-semibold text-sm text-gray-900">Lifecycle Order</h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">AI-sorted workflow sequence</p>
+              <h3 className="font-semibold text-sm text-gray-900">Flow Timeline</h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">Execution order of your automations</p>
             </div>
             <div className="flex items-center gap-1.5">
               {sequenceData && !sequenceLoading && (
@@ -1387,8 +1387,8 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-2 border-violet-300 border-t-violet-600 mx-auto mb-3" />
-                <p className="text-xs text-gray-500">AI is analysing your workflows...</p>
-                <p className="text-[10px] text-gray-400 mt-1">This may take 10-20 seconds</p>
+                <p className="text-xs text-gray-500">Tracing trigger chains...</p>
+                <p className="text-[10px] text-gray-400 mt-1">Mapping property writes → enrollment criteria</p>
               </div>
             </div>
           ) : sequenceData?.sequence ? (
@@ -1458,6 +1458,10 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                               <p className="text-xs font-semibold text-gray-900 truncate group-hover:text-violet-700 transition-colors">{name}</p>
                               <p className="text-[10px] text-gray-400 leading-relaxed mt-0.5">{item.reasoning}</p>
                             </div>
+                            {item.triggerReason && (
+                                <p className="text-[10px] text-violet-500 leading-relaxed mt-0.5">{item.triggerReason}</p>
+                              )}
+                            
                           </div>
                           {/* Trigger chain arrows */}
                           {item.triggers && item.triggers.length > 0 && (
