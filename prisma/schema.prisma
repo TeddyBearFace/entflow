@@ -32,6 +32,18 @@ model User {
 
   @@map("users")
 }
+model DismissedConflict {
+  id         String   @id @default(cuid())
+  portalId   String   @map("portal_id")
+  propertyKey String  @map("property_key") // e.g. "CONTACT:lifecyclestage"
+  dismissedBy String? @map("dismissed_by")
+  dismissedAt DateTime @default(now()) @map("dismissed_at")
+
+  portal     Portal   @relation(fields: [portalId], references: [id], onDelete: Cascade)
+
+  @@unique([portalId, propertyKey])
+  @@map("dismissed_conflicts")
+}
 
 model Account {
   id                String  @id @default(cuid())
@@ -129,6 +141,7 @@ model Portal {
 
   // Relations
   userPortals     UserPortal[]
+  dismissedConflicts  DismissedConflict[]
   workflows       Workflow[]
   dependencies    Dependency[]
   conflicts       Conflict[]

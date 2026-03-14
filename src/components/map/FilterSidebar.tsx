@@ -128,6 +128,32 @@ export default function FilterSidebar({
   const [impactLoading, setImpactLoading] = useState(false);
   const [impactObjectFilter, setImpactObjectFilter] = useState<string | null>(null);
   const [conflictsOnly, setConflictsOnly] = useState(false);
+  const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set());
+  const [showDismissed, setShowDismissed] = useState(false);
+
+  // Fetch dismissed conflicts
+  useEffect(() => {
+    fetch(`/api/dismissed-conflicts?portalId=${portalId}`)
+      .then(r => r.json())
+      .then(data => setDismissedKeys(new Set(data.dismissed || [])))
+      .catch(() => {});
+  }, [portalId]);
+
+  const dismissConflict = async (propertyKey: string) => {
+    setDismissedKeys(prev => new Set([...prev, propertyKey]));
+    await fetch("/api/dismissed-conflicts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ portalId, propertyKey }),
+    }).catch(() => {});
+  };
+
+  const restoreConflict = async (propertyKey: string) => {
+    setDismissedKeys(prev => { const next = new Set(prev); next.delete(propertyKey); return next; });
+    await fetch(`/api/dismissed-conflicts?portalId=${portalId}&propertyKey=${encodeURIComponent(propertyKey)}`, {
+      method: "DELETE",
+    }).catch(() => {});
+  };
 
   // Tags
   const [tags, setTags] = useState<Array<{ id: string; name: string; color: string; _count: { workflowTags: number } }>>([]);
@@ -215,7 +241,10 @@ export default function FilterSidebar({
     }
   };
 
-  const conflictCount = properties.filter(p => p.hasConflict).length;
+  const allConflicts = properties.filter(p => p.hasConflict);
+  const visibleConflicts = allConflicts.filter(p => !dismissedKeys.has(`${p.objectType}:${p.property}`));
+  const conflictCount = visibleConflicts.length;
+  const dismissedCount = allConflicts.length - visibleConflicts.length;
   let filteredProps = properties;
   if (conflictsOnly) filteredProps = filteredProps.filter(p => p.hasConflict);
 
@@ -414,10 +443,16 @@ export default function FilterSidebar({
                   ))}
                 </div>
                 <div className="flex items-center gap-1.5 mt-2">
-                  {conflictCount > 0 && (
+                  {(conflictCount > 0 || dismissedCount > 0) && (
                     <button onClick={() => setConflictsOnly(!conflictsOnly)}
                       className={`text-xs font-medium px-2 py-1 rounded-md transition-colors ${conflictsOnly ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>
-                      Conflicts
+                      Conflicts {conflictCount > 0 && `(${conflictCount})`}
+                    </button>
+                  )}
+                  {dismissedCount > 0 && (
+                    <button onClick={() => setShowDismissed(!showDismissed)}
+                      className={`text-xs font-medium px-2 py-1 rounded-md transition-colors ${showDismissed ? "bg-gray-200 text-gray-700" : "bg-gray-100 text-gray-400"}`}>
+                      {showDismissed ? "Hide" : "Show"} {dismissedCount} dismissed
                     </button>
                   )}
                   <span className="text-xs text-gray-400 ml-auto tabular-nums">{filteredProps.length}</span>
@@ -464,14 +499,20 @@ export default function FilterSidebar({
                                 </div>
                               </div>
 
-                              {p.hasConflict && showConflicts && (
+                              {p.hasConflict && showConflicts && !dismissedKeys.has(key) && (
                                 <div className="mt-1.5 rounded-md bg-red-50 border border-red-100 p-2"
                                   onClick={(e) => { e.stopPropagation(); handleConflictClick(e, p); }}>
                                   <div className="flex items-center gap-1.5 mb-1">
                                     <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z" />
                                     </svg>
-                                    <span className="text-xs font-semibold text-red-700">>{activeWriters.length} active writers</span>
+                                    <span className="text-xs font-semibold text-red-700 flex-1">{activeWriters.length} active writers</span>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); dismissConflict(`${p.objectType}:${p.property}`); }}
+                                      className="text-[10px] text-red-400 hover:text-red-600 transition-colors px-1"
+                                      title="Dismiss this conflict">
+                                      ×
+                                    </button>
                                   </div>
                                   <div className="space-y-0.5 ml-4">
                                     {activeWriters.slice(0, 3).map(w => (
@@ -484,6 +525,17 @@ export default function FilterSidebar({
                                       <span className="text-xs text-red-500">+{activeWriters.length - 3} more</span>
                                     )}
                                   </div>
+                                </div>
+                              )}
+                              {p.hasConflict && showConflicts && dismissedKeys.has(key) && showDismissed && (
+                                <div className="mt-1.5 rounded-md bg-gray-50 border border-gray-200 p-2 flex items-center justify-between"
+                                  onClick={(e) => e.stopPropagation()}>
+                                  <span className="text-xs text-gray-400">Conflict dismissed</span>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); restoreConflict(`${p.objectType}:${p.property}`); }}
+                                    className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                                    Restore
+                                  </button>
                                 </div>
                               )}
                             </button>
