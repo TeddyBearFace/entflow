@@ -217,7 +217,9 @@ export default function SyncBar({
           <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-300 border-t-blue-600 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <p className={`font-medium text-blue-800 truncate ${compact ? "text-xs" : "text-sm"}`}>
-              {message}
+              {total > 0 && progress > 0
+                ? `Syncing workflows... ${progress} of ${total}`
+                : message}
             </p>
           </div>
           {total > 0 && (

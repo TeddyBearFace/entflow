@@ -139,8 +139,9 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
 
     // --- Step 4.5: Fetch pipelines ---
     console.log(`[Sync ${portalId}] Fetching pipelines...`);
-    await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, "Fetching pipelines & stages...");
+    await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, "Fetching deal pipelines...");
     const dealPipelines = await fetchPipelines(portalId, "DEAL");
+    await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, "Fetching ticket pipelines...");
     const ticketPipelines = await fetchPipelines(portalId, "TICKET");
     const allPipelines = [
       ...dealPipelines.map((p) => ({ ...p, objectType: "DEAL" })),
@@ -168,7 +169,12 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
       }
     }
     const emailDetails: Array<{ id: string; name: string; subject: string }> = [];
+    let emailIdx = 0;
     for (const emailId of emailIds) {
+      emailIdx++;
+      if (emailIdx % 5 === 0 || emailIdx === emailIds.size) {
+        await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, `Resolving emails (${emailIdx}/${emailIds.size})...`);
+      }
       const detail = await fetchMarketingEmail(portalId, emailId);
       if (detail) emailDetails.push(detail);
     }
@@ -191,7 +197,12 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
       }
     }
     const listDetails: Array<{ id: string; name: string }> = [];
+    let listIdx = 0;
     for (const listId of listIds) {
+      listIdx++;
+      if (listIdx % 5 === 0 || listIdx === listIds.size) {
+        await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, `Resolving lists (${listIdx}/${listIds.size})...`);
+      }
       const detail = await fetchListDetails(portalId, listId);
       if (detail) listDetails.push(detail);
     }

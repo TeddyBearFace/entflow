@@ -41,8 +41,7 @@ export default function WelcomePage() {
 
       if (data.portalName) setPortalName(data.portalName);
 
-      const isComplete = data.status === "COMPLETED" || 
-        (data.status === "SYNCING" && data.progress > 0 && data.total > 0 && data.progress >= data.total);
+      const isComplete = data.status === "COMPLETED";
       
       // If sync hasn't started yet (null/IDLE), keep waiting
       // If status is unknown but lastSyncedAt exists, treat as complete
