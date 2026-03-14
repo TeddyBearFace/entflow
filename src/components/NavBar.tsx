@@ -23,6 +23,7 @@ export default function NavBar({ portalId, portalName }: NavBarProps) {
     { href: `/dashboard?portal=${pid}`, label: "Dashboard", match: "/dashboard" },
     { href: `/map?portal=${pid}`, label: "Map", match: "/map" },
     { href: `/analyst?portal=${pid}`, label: "AI Analyst", match: "/analyst" },
+    { href: `/timeline?portal=${pid}`, label: "Flow Timeline", match: "/timeline" },
     { href: `/changelog?portal=${pid}`, label: "Changelog", match: "/changelog" },
     { href: `/documentation`, label: "Docs", match: "/documentation" },
   ];
