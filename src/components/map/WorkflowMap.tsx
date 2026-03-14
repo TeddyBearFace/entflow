@@ -671,8 +671,6 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
     }, totalDuration);
   }, [sequenceData, setNodes, portalId, reactFlowInstance]);
 
-  const matchTypeIcons: Record<string, string> = { workflow_name: "📋", action: "⚡", property: "✏️", email: "📧", list: "📝", enrollment: "📥" };
-
   // Canvas click handler - create new elements based on active tool
   const onCanvasClick = useCallback(async (event: React.MouseEvent) => {
     if (canvasTool === "select" || canvasTool === "connector") return;
@@ -918,6 +916,20 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
       const { markerStart: _, markerEnd: __, ...rest } = e as any;
       return { ...rest, style: { ...e.style, stroke: color }, ...markers };
     }));
+  }, [selectedEdge, edges, setEdges]);
+
+  const changeEdgeStyle = useCallback(async (style: string) => {
+    if (!selectedEdge) return;
+    const edge = edges.find(e => e.id === selectedEdge);
+    const dasharray = style === "dashed" ? "8 4" : style === "dotted" ? "2 2" : undefined;
+    if (edge?.data?.customEdgeId) {
+      await fetch("/api/custom-edges", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ edgeId: edge.data.customEdgeId, edgeType: style }),
+      });
+    }
+    setEdges(eds => eds.map(e => e.id === selectedEdge ? { ...e, style: { ...e.style, strokeDasharray: dasharray } } : e));
   }, [selectedEdge, edges, setEdges]);
 
   // Change edge style (solid, dashed, dotted)
@@ -1201,13 +1213,13 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                         {sequenceLoading ? (
                           <><div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-violet-300 border-t-violet-600" /> Mapping flow...</>
                         ) : (
-                          <>🔄 Flow Timeline {sequenceData && <span className="text-[10px] text-violet-400 ml-auto">saved</span>}</>
+                          <><IconTimeline className="w-3.5 h-3.5" /> Flow Timeline {sequenceData && <span className="text-[10px] text-violet-400 ml-auto">saved</span>}</>
                         )}
                       </button>
                       <div className="border-t border-gray-100 my-1" />
                       <ProBadge allowed={canUse("autoSync")} portalId={portalId} feature="Auto-sync">
                         <button onClick={() => { toggleAutoSync(); setMenuOpen(false); }} className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${autoSync.enabled ? "text-emerald-700" : "text-gray-700 hover:bg-gray-50"}`}>
-                          {autoSync.enabled ? "<IconSync className="w-3.5 h-3.5" /> Auto-sync on" : "<IconSync className="w-3.5 h-3.5" /> Auto-sync on"}
+                          {autoSync.enabled ? <><IconSync className="w-3.5 h-3.5" /> Auto-sync on</> : <><IconSync className="w-3.5 h-3.5" /> Auto-sync off</>}
                         </button>
                       </ProBadge>
                       <div className="border-t border-gray-100 my-1" />
@@ -1383,7 +1395,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
               {/* Animated toggle */}
               <button onClick={toggleEdgeAnimation}
                 className={`px-2 py-1 rounded text-[10px] font-medium ${edge.animated ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:bg-gray-100"}`}>
-                {edge.animated ? "⚡ Animated" : "Animate"}
+                {edge.animated ? "Animated" : "Animate"}
               </button>
               <span className="w-px h-5 bg-gray-200" />
               <button onClick={deleteSelectedEdge}
@@ -1420,7 +1432,9 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                   {searchResults.map((r: any, i: number) => (
                     <button key={i} onClick={() => { setSelectedWorkflow(r.workflowId); setSearchOpen(false); setSearchQuery(""); }}
                       className="w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors flex items-start gap-3">
-                      <span className="text-base mt-0.5">{matchTypeIcons[r.matchType] || "📋"}</span>
+                      <span className="w-4 h-4 rounded bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg className="w-2.5 h-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                      </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">{r.workflowName}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{r.matchDetail}</p>
