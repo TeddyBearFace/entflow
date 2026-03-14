@@ -110,29 +110,32 @@ export default function SyncBar({
     }
   }, [phase, poll]);
 
-  /// Check on mount if a sync is already in progress
-  const hasCheckedRef = useRef(false);
+  // Background poll — detect syncs that start while page is open
   useEffect(() => {
-    if (hasCheckedRef.current) return;
-    hasCheckedRef.current = true;
-    fetch(`/api/sync-status?portalId=${portalId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.status === "SYNCING") {
+    const bgPoll = async () => {
+      try {
+        const res = await fetch(`/api/sync-status?portalId=${portalId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        if (data.status === "SYNCING" && phase !== "syncing") {
           setSyncStatus(data);
           setPhase("syncing");
         }
         if (data.lastSyncedAt) {
           setLastSynced(data.lastSyncedAt);
-          // Calculate cooldown directly from response data
           if (isFree) {
             const elapsed = Date.now() - new Date(data.lastSyncedAt).getTime();
             setCooldownMs(Math.max(0, FREE_COOLDOWN_MS - elapsed));
           }
         }
-      })
-      .catch(() => {});
-  }, [portalId, isFree]);
+      } catch {}
+    };
+
+    bgPoll(); // immediate first check
+    const interval = setInterval(bgPoll, 5000);
+    return () => clearInterval(interval);
+  }, [portalId, isFree, phase]);
 
   // Handle "done" phase
   useEffect(() => {

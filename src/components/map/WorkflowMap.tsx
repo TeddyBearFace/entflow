@@ -310,7 +310,15 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         };
       });
 
-      setNodes([...workflowNodes, ...customNodes]);
+      // Add staggered entrance delay to each node
+      const allNodes = [...workflowNodes, ...customNodes].map((n, i) => ({
+        ...n,
+        style: {
+          ...n.style,
+          animationDelay: `${Math.min(i * 30, 500)}ms`,
+        },
+      }));
+      setNodes(allNodes);
       setEdges([...(graphData.edges || []), ...customEdgeNodes]);
       setStages(graphData.stages || []);
       setStats(graphData.stats || null);
