@@ -272,6 +272,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         style: { stroke: ce.color || "#6366f1", strokeWidth: 2, strokeDasharray: ce.edgeType === "dashed" ? "8 4" : ce.edgeType === "dotted" ? "2 2" : undefined },
         label: ce.label || undefined,
         type: "smoothstep",
+        markerEnd: { type: "arrowclosed" as any, color: ce.color || "#6366f1", width: 18, height: 18 },
         animated: ce.animated || false,
         data: { customEdgeId: ce.id },
       }));
@@ -704,6 +705,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
           style: { stroke: edge.color, strokeWidth: 2 },
           label: edge.label || undefined,
           type: "smoothstep",
+          markerEnd: { type: "arrowclosed" as any, color: edge.color || canvasColor, width: 18, height: 18 },
           data: { customEdgeId: edge.id },
         }]);
       }
@@ -1021,7 +1023,10 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
           minZoom={0.1}
           maxZoom={1.5}
           attributionPosition="bottom-left"
-          defaultEdgeOptions={{ type: "smoothstep" }}
+          defaultEdgeOptions={{
+            type: "smoothstep",
+            markerEnd: { type: "arrowclosed" as any, width: 20, height: 20 },
+          }}
           className={canvasTool !== "select" ? "cursor-crosshair" : ""}
         >
           <Background color={snapToGrid ? "#c7c7cc" : "#e5e7eb"} gap={20} size={snapToGrid ? 2 : 1} />

@@ -335,8 +335,10 @@ export function buildJourneyGraph(
         strokeWidth: d.severity === "CRITICAL" ? 3 : d.severity === "WARNING" ? 2 : 1.5,
       },
       markerEnd: {
-        type: "arrowclosed" as any,
+        type: "arrowclosed",
         color: EDGE_COLORS[d.type] || "#95A5A6",
+        width: 20,
+        height: 20,
       },
       label: getEdgeLabel(d.type),
       labelStyle: { fontSize: 10, fill: "#666" },

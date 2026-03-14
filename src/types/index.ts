@@ -137,6 +137,12 @@ export interface GraphEdge {
   type: "smoothstep";
   animated?: boolean;
   data: DependencyEdgeData;
+  style?: Record<string, any>;
+  markerEnd?: { type: string; color?: string; width?: number; height?: number };
+  label?: string;
+  labelStyle?: Record<string, any>;
+  labelBgStyle?: Record<string, any>;
+  labelBgPadding?: [number, number];
 }
 
 export interface DependencyEdgeData {
