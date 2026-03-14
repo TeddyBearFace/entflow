@@ -238,7 +238,7 @@ export async function batchFetchWorkflowDetails(
 ): Promise<HubSpotFlowDetail[]> {
   const accessToken = await getValidAccessToken(portalId);
   const allDetails: HubSpotFlowDetail[] = [];
-  const BATCH_SIZE = 50;
+  const BATCH_SIZE = 25;
 
   for (let i = 0; i < flowIds.length; i += BATCH_SIZE) {
     const batch = flowIds.slice(i, i + BATCH_SIZE);
