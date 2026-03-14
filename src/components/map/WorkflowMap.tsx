@@ -945,7 +945,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center flex-1 h-full w-full">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4" />
           <p className="text-gray-500">Loading workflow journey map...</p>
@@ -956,7 +956,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center flex-1 h-full w-full">
         <div className="text-center max-w-md">
           <p className="text-red-600 font-medium mb-2">Failed to load map</p>
           <p className="text-gray-500 text-sm mb-4">{error}</p>
