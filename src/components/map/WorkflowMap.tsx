@@ -51,8 +51,8 @@ interface WorkflowMapProps {
 
 export default function WorkflowMap({ portalId, portalName }: WorkflowMapProps) {
   return (
-    <>
-      <div className="flex md:hidden items-center justify-center h-full px-6">
+    <div className="flex flex-col h-full w-full">
+      <div className="flex md:hidden items-center justify-center flex-1 px-6">
         <div className="text-center max-w-sm">
           <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,7 +71,7 @@ export default function WorkflowMap({ portalId, portalName }: WorkflowMapProps) 
           <WorkflowMapInner portalId={portalId} portalName={portalName} />
         </ReactFlowProvider>
       </div>
-    </>
+    </div>
   );
 }
 
