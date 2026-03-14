@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     );
 
     return NextResponse.redirect(
-      `${appUrl}/dashboard?portal=${portalId}&connected=true`
+      `${appUrl}/welcome?portal=${portalId}`
     );
   } catch (err) {
     console.error("OAuth callback error:", err);

@@ -16,6 +16,7 @@ const PUBLIC_ROUTES = [
   "/api/debug",
   "/admin",
   "/api/admin",
+  "/welcome",
 ];
 
 export async function middleware(request: NextRequest) {

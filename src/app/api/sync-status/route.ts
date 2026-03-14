@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const portal = await prisma.portal.findUnique({
     where: { id: portalId },
     select: {
+      name: true,
       syncStatus: true,
       syncProgress: true,
       syncTotal: true,
@@ -41,5 +42,6 @@ export async function GET(request: NextRequest) {
     message,
     lastSyncedAt: portal.lastSyncedAt,
     percent: portal.syncTotal > 0 ? Math.round((portal.syncProgress / portal.syncTotal) * 100) : 0,
+    portalName: portal.name,
   });
 }
