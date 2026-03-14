@@ -343,7 +343,7 @@ export default function FilterSidebar({
                         border: `1.5px solid ${active ? tag.color : `${tag.color}25`}`,
                       }}>
                       {tag.name}
-                      <span className="text-[10px] opacity-50">{tag._count.workflowTags}</span>
+                      <span className="text-xs opacity-50">{tag._count.workflowTags}</span>
                       <span onClick={(e) => { e.stopPropagation(); deleteTag(tag.id); }}
                         className="ml-0.5 opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity cursor-pointer">×</span>
                     </button>
@@ -377,7 +377,7 @@ export default function FilterSidebar({
               {IconProperty}
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Property Impact</span>
               {canUse && !canUse("propertyImpact") && (
-                <span className="text-[9px] font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded px-1.5 py-0.5 leading-none">Pro</span>
+                <span className="text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded px-1.5 py-0.5 leading-none">Pro</span>
               )}
               {(!canUse || canUse("propertyImpact")) && conflictCount > 0 && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-600 font-bold leading-none">{conflictCount}</span>
@@ -405,7 +405,7 @@ export default function FilterSidebar({
                     { val: "TICKET", label: "Ticket" },
                   ].map(opt => (
                     <button key={opt.label} onClick={() => setImpactObjectFilter(opt.val === impactObjectFilter ? null : opt.val)}
-                      className="px-2 py-1 rounded-md text-[10px] font-semibold transition-colors"
+                      className="px-2 py-1 rounded-md text-xs font-medium transition-colors"
                       style={impactObjectFilter === opt.val || (!opt.val && !impactObjectFilter)
                         ? { backgroundColor: opt.val ? OBJ_COLORS[opt.val]?.text || "#333" : "#1F2937", color: "white" }
                         : { backgroundColor: opt.val ? OBJ_COLORS[opt.val]?.bg || "#F3F4F6" : "#F3F4F6", color: opt.val ? OBJ_COLORS[opt.val]?.text || "#666" : "#6B7280" }}>
@@ -416,11 +416,11 @@ export default function FilterSidebar({
                 <div className="flex items-center gap-1.5 mt-2">
                   {conflictCount > 0 && (
                     <button onClick={() => setConflictsOnly(!conflictsOnly)}
-                      className={`text-[10px] font-semibold px-2 py-1 rounded-md transition-colors ${conflictsOnly ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>
+                      className={`text-xs font-medium px-2 py-1 rounded-md transition-colors ${conflictsOnly ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>
                       Conflicts
                     </button>
                   )}
-                  <span className="text-[10px] text-gray-400 ml-auto tabular-nums">{filteredProps.length} props</span>
+                  <span className="text-xs text-gray-400 ml-auto tabular-nums">{filteredProps.length}</span>
                 </div>
               </div>
 
@@ -436,7 +436,7 @@ export default function FilterSidebar({
                   [...grouped.entries()].map(([objType, props]) => (
                     <div key={objType}>
                       <div className="px-4 py-1.5 bg-gray-50/80 sticky top-0 z-10">
-                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: OBJ_COLORS[objType]?.text || "#666" }}>
+                        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: OBJ_COLORS[objType]?.text || "#666" }}>
                           {objType}
                         </span>
                       </div>
@@ -471,7 +471,7 @@ export default function FilterSidebar({
                                     <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z" />
                                     </svg>
-                                    <span className="text-[10px] font-semibold text-red-700">{activeWriters.length} active writers</span>
+                                    <span className="text-xs font-semibold text-red-700">>{activeWriters.length} active writers</span>
                                   </div>
                                   <div className="space-y-0.5 ml-4">
                                     {activeWriters.slice(0, 3).map(w => (
@@ -481,7 +481,7 @@ export default function FilterSidebar({
                                       </div>
                                     ))}
                                     {activeWriters.length > 3 && (
-                                      <span className="text-[10px] text-red-500">+{activeWriters.length - 3} more</span>
+                                      <span className="text-xs text-red-500">+{activeWriters.length - 3} more</span>
                                     )}
                                   </div>
                                 </div>
@@ -492,14 +492,14 @@ export default function FilterSidebar({
                               <div className="px-4 py-2 bg-blue-50/50 border-b border-blue-100">
                                 {p.writers.length > 0 && (
                                   <div className="mb-2">
-                                    <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Writers</span>
+                                    <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Writers</span>
                                     <div className="mt-1 space-y-0.5">
                                       {p.writers.map(w => (
                                         <button key={w.workflowId} onClick={() => onWorkflowClick(w.workflowId)}
                                           className="w-full text-left flex items-center gap-1.5 py-1 hover:bg-blue-100/50 rounded px-1.5 -mx-1.5 transition-colors">
                                           <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${w.status === "ACTIVE" ? "bg-emerald-500" : "bg-gray-400"}`} />
                                           <span className="text-xs text-gray-700 truncate flex-1">{w.name}</span>
-                                          {w.value && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 flex-shrink-0">→ {w.value}</span>}
+                                          {w.value && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 flex-shrink-0">→ {w.value}</span>}
                                         </button>
                                       ))}
                                     </div>
@@ -507,7 +507,7 @@ export default function FilterSidebar({
                                 )}
                                 {p.readers.length > 0 && (
                                   <div>
-                                    <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">Readers</span>
+                                    <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">Readers</span>
                                     <div className="mt-1 space-y-0.5">
                                       {p.readers.map(r => (
                                         <button key={r.workflowId} onClick={() => onWorkflowClick(r.workflowId)}
