@@ -37,8 +37,6 @@ function getEdgeMarkers(markerType: string, color: string) {
   switch (markerType) {
     case "bidirectional":
       return { markerStart: { ...arrow }, markerEnd: { ...arrow } };
-    case "reverse":
-      return { markerStart: { ...arrow } };
     case "none":
       return {};
     case "arrow":
@@ -295,17 +293,21 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
       });
 
       // Build custom edges
-      const customEdgeNodes = (Array.isArray(customEdgesData) ? customEdgesData : []).map((ce: any) => ({
-        id: `custom-${ce.id}`,
-        source: ce.sourceNodeId,
-        target: ce.targetNodeId,
-        style: { stroke: ce.color || "#6366f1", strokeWidth: 2, strokeDasharray: ce.edgeType === "dashed" ? "8 4" : ce.edgeType === "dotted" ? "2 2" : undefined },
-        label: ce.label || undefined,
-        type: "smoothstep",
-        ...getEdgeMarkers(ce.markerType || "arrow", ce.color || "#6366f1"),
-        animated: ce.animated || false,
-        data: { customEdgeId: ce.id, markerType: ce.markerType || "arrow" },
-      }));
+     const customEdgeNodes = (Array.isArray(customEdgesData) ? customEdgesData : []).map((ce: any) => {
+        const mt = ce.markerType || "arrow";
+        const isReverse = mt === "reverse";
+        return {
+          id: `custom-${ce.id}`,
+          source: isReverse ? ce.targetNodeId : ce.sourceNodeId,
+          target: isReverse ? ce.sourceNodeId : ce.targetNodeId,
+          style: { stroke: ce.color || "#6366f1", strokeWidth: 2, strokeDasharray: ce.edgeType === "dashed" ? "8 4" : ce.edgeType === "dotted" ? "2 2" : undefined },
+          label: ce.label || undefined,
+          type: "smoothstep",
+          ...getEdgeMarkers(isReverse ? "arrow" : mt, ce.color || "#6366f1"),
+          animated: ce.animated || false,
+          data: { customEdgeId: ce.id, markerType: mt },
+        };
+      });
 
       setNodes([...workflowNodes, ...customNodes]);
       setEdges([...(graphData.edges || []), ...customEdgeNodes]);
@@ -767,7 +769,6 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
           type: "smoothstep",
           ...getEdgeMarkers("arrow", edge.color || canvasColor),
           data: { customEdgeId: edge.id, markerType: "arrow" },
-          data: { customEdgeId: edge.id },
         }]);
       }
     } catch (err) { console.error("Failed to create edge:", err); }
@@ -909,7 +910,8 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
       });
     }
     const markerType = edge?.data?.markerType || "arrow";
-    const markers = getEdgeMarkers(markerType, color);
+    const markersType = markerType === "reverse" ? "arrow" : markerType;
+    const markers = getEdgeMarkers(markersType, color);
     setEdges(eds => eds.map(e => {
       if (e.id !== selectedEdge) return e;
       const { markerStart: _, markerEnd: __, ...rest } = e as any;
@@ -921,8 +923,14 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
   const changeEdgeMarker = useCallback(async (markerType: string) => {
     if (!selectedEdge) return;
     const edge = edges.find(e => e.id === selectedEdge);
+    if (!edge) return;
     const color = (edge?.style as any)?.stroke || "#6366f1";
-    const markers = getEdgeMarkers(markerType, color);
+    const prevMarkerType = edge?.data?.markerType || "arrow";
+
+    // Determine if we need to swap source/target
+    const wasReversed = prevMarkerType === "reverse";
+    const willReverse = markerType === "reverse";
+    const needsSwap = wasReversed !== willReverse;
 
     if (edge?.data?.customEdgeId) {
       await fetch("/api/custom-edges", {
@@ -932,11 +940,32 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
       });
     }
 
+    // For reverse, use forward arrow but swap source/target
+    const markersType = markerType === "reverse" ? "arrow" : markerType;
+    const markers = getEdgeMarkers(markersType, color);
+
     setEdges(eds => eds.map(e => {
       if (e.id !== selectedEdge) return e;
-      // Clear existing markers first, then apply new ones
       const { markerStart: _, markerEnd: __, ...rest } = e as any;
-      return { ...rest, ...markers, data: { ...e.data, markerType } };
+
+      const updated = {
+        ...rest,
+        ...markers,
+        data: { ...e.data, markerType },
+      };
+
+      // Swap source and target if needed
+      if (needsSwap) {
+        const tmpSource = updated.source;
+        updated.source = updated.target;
+        updated.target = tmpSource;
+        // Also swap source/target handles if they exist
+        const tmpSourceHandle = updated.sourceHandle;
+        updated.sourceHandle = updated.targetHandle;
+        updated.targetHandle = tmpSourceHandle;
+      }
+
+      return updated;
     }));
   }, [selectedEdge, edges, setEdges]);
 
