@@ -504,6 +504,20 @@ model WorkflowSnapshot {
   @@map("workflow_snapshots")
 }
 
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  portalId  String?  @map("portal_id")
+  userId    String?  @map("user_id")
+  event     String
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([event, createdAt])
+  @@index([portalId])
+  @@index([userId])
+  @@map("analytics_events")
+}
+
 model ChangelogEntry {
   id                String    @id @default(cuid())
   portalId          String    @map("portal_id")

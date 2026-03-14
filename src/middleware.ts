@@ -14,6 +14,8 @@ const PUBLIC_ROUTES = [
   "/api/webhooks",
   "/api/cron",
   "/api/debug",
+  "/admin",
+  "/api/admin",
 ];
 
 export async function middleware(request: NextRequest) {
