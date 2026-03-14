@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import NavBar from "@/components/NavBar";
+import { IconFlowTimelineBrand } from "@/components/icons";
 import Link from "next/link";
 
 interface SequenceItem {
@@ -139,7 +140,10 @@ export default function FlowTimelinePage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Flow Timeline</h1>
+            <div className="flex items-center gap-2.5">
+              <IconFlowTimelineBrand size={28} />
+              <h1 className="text-xl font-semibold text-gray-900">Flow Timeline</h1>
+            </div>
             <p className="text-sm text-gray-500 mt-1">
               {generatedAt
                 ? `Last mapped ${new Date(generatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`

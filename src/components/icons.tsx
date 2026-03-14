@@ -81,6 +81,25 @@ export const IconHealthScore = (p: IconProps) => MI({ ...p, paths: ["M21 8.25c0-
 export const IconConflictDetection = (p: IconProps) => MI({ ...p, paths: ["M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79M12 12h.008v.008H12V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"] });
 export const IconImpact = (p: IconProps) => MI({ ...p, paths: ["M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"] });
 
+// Flow Timeline Icon //
+export function IconFlowTimelineBrand({ className, size }: IconProps) {
+  const s = size || 24;
+  return (
+    <svg className={className} width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="2" width="20" height="20" rx="6" fill="url(#ftBrand)" />
+      <path d="M7 8h3m-3 4h5m-5 4h7" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="16" cy="8" r="1.5" fill="white" />
+      <circle cx="16" cy="12" r="1.5" fill="white" />
+      <circle cx="16" cy="16" r="1.5" fill="white" />
+      <defs>
+        <linearGradient id="ftBrand" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#8B5CF6" />
+          <stop offset="1" stopColor="#6D28D9" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
 // ── Utility: Map of changelog types to icons ──
 export const CHANGELOG_ICONS: Record<string, (p: IconProps) => JSX.Element> = {
   WORKFLOW_CREATED: IconCreated,
