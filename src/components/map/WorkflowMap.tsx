@@ -118,6 +118,20 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
   const [sequenceLoading, setSequenceLoading] = useState(false);
   const [sequencePanel, setSequencePanel] = useState(false);
   const [sequenceError, setSequenceError] = useState<string | null>(null);
+  const [sequenceGeneratedAt, setSequenceGeneratedAt] = useState<string | null>(null);
+
+  // Load saved Flow Timeline on mount
+  useEffect(() => {
+    fetch(`/api/analyst/sequence/save?portalId=${portalId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.sequence) {
+          setSequenceData(data.sequence);
+          setSequenceGeneratedAt(data.generatedAt);
+        }
+      })
+      .catch(() => {});
+  }, [portalId]);
   const [filters, setFilters] = useState<MapFilters>({
     status: [],
     objectTypes: [],
@@ -568,6 +582,14 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         return;
       }
       setSequenceData(data.sequence);
+      setSequenceGeneratedAt(new Date().toISOString());
+
+      // Persist to DB
+      fetch("/api/analyst/sequence/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ portalId, sequence: data.sequence }),
+      }).catch(() => {});
     } catch (err) {
       console.error("[sequence] Failed:", err);
       setSequenceError("Network error. Check your connection and try again.");
@@ -588,7 +610,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
     }
 
     const COL_WIDTH = 380;
-    const ROW_HEIGHT = 320;
+    const ROW_HEIGHT = 280;
     const START_X = 100;
     const START_Y = 100;
     const targets = new Map<string, { x: number; y: number }>();
@@ -1143,12 +1165,13 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                       <a href={`/analyst?portal=${portalId}`} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-violet-50 hover:text-violet-700 flex items-center gap-2 transition-colors">
                         🔬 AI Analyst
                       </a>
-                      <button onClick={runLifecycleSort} disabled={sequenceLoading}
+                      <button onClick={() => { setSequencePanel(true); setMenuOpen(false); if (!sequenceData) runLifecycleSort(); }}
+                        disabled={sequenceLoading}
                         className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-violet-50 hover:text-violet-700 flex items-center gap-2 transition-colors disabled:opacity-50">
                         {sequenceLoading ? (
                           <><div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-violet-300 border-t-violet-600" /> Mapping flow...</>
                         ) : (
-                          <>🔄 Flow Timeline</>
+                          <>🔄 Flow Timeline {sequenceData && <span className="text-[10px] text-violet-400 ml-auto">saved</span>}</>
                         )}
                       </button>
                       <div className="border-t border-gray-100 my-1" />
@@ -1390,7 +1413,17 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <div>
               <h3 className="font-semibold text-sm text-gray-900">Flow Timeline</h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Execution order of your automations</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                {sequenceGeneratedAt
+                  ? `Mapped ${new Date(sequenceGeneratedAt).toLocaleDateString()} · `
+                  : "Execution order of your automations"}
+                {sequenceGeneratedAt && (
+                  <button onClick={runLifecycleSort} disabled={sequenceLoading}
+                    className="text-violet-500 hover:text-violet-600 font-medium disabled:opacity-50">
+                    {sequenceLoading ? "Remapping..." : "Rerun"}
+                  </button>
+                )}
+              </p>
             </div>
             <div className="flex items-center gap-1.5">
               {sequenceData && !sequenceLoading && (

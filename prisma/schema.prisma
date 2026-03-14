@@ -120,6 +120,10 @@ model Portal {
   autoSyncEnabled Boolean    @default(false) @map("auto_sync_enabled")
   autoSyncInterval Int       @default(360) @map("auto_sync_interval")
 
+  // Flow Timeline
+  flowTimeline        Json?      @map("flow_timeline")
+  flowTimelineAt      DateTime?  @map("flow_timeline_at")
+
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
