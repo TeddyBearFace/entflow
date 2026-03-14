@@ -127,7 +127,6 @@ export default function FilterSidebar({
   const [properties, setProperties] = useState<PropertyImpact[]>([]);
   const [impactLoading, setImpactLoading] = useState(false);
   const [impactObjectFilter, setImpactObjectFilter] = useState<string | null>(null);
-  const [showKeyOnly, setShowKeyOnly] = useState(true);
   const [conflictsOnly, setConflictsOnly] = useState(false);
 
   // Tags
@@ -217,7 +216,7 @@ export default function FilterSidebar({
   };
 
   const conflictCount = properties.filter(p => p.hasConflict).length;
-  let filteredProps = showKeyOnly ? properties.filter(p => p.critical) : properties;
+  let filteredProps = properties;
   if (conflictsOnly) filteredProps = filteredProps.filter(p => p.hasConflict);
 
   const grouped = new Map<string, PropertyImpact[]>();
@@ -415,10 +414,6 @@ export default function FilterSidebar({
                   ))}
                 </div>
                 <div className="flex items-center gap-1.5 mt-2">
-                  <button onClick={() => setShowKeyOnly(!showKeyOnly)}
-                    className={`text-[10px] font-semibold px-2 py-1 rounded-md transition-colors ${showKeyOnly ? "bg-blue-50 text-blue-600" : "bg-gray-100 text-gray-500"}`}>
-                    {showKeyOnly ? "Key only" : "All props"}
-                  </button>
                   {conflictCount > 0 && (
                     <button onClick={() => setConflictsOnly(!conflictsOnly)}
                       className={`text-[10px] font-semibold px-2 py-1 rounded-md transition-colors ${conflictsOnly ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>

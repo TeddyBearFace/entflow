@@ -234,7 +234,7 @@ export async function GET(request: NextRequest) {
 
   // Sort: critical first, then by total workflows, then alphabetical
   const results = [...impactMap.values()]
-    .filter(i => i.totalWorkflows > 0 || i.critical)
+    .filter(i => i.totalWorkflows > 0)
     .sort((a, b) => {
       if (a.critical !== b.critical) return a.critical ? -1 : 1;
       if (a.totalWorkflows !== b.totalWorkflows) return b.totalWorkflows - a.totalWorkflows;
