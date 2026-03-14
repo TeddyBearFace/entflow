@@ -3,15 +3,20 @@
 import { memo } from "react";
 import { Handle, Position, NodeResizer } from "reactflow";
 import type { WorkflowNodeData } from "@/types";
+import { IconContact, IconDeal, IconCompany, IconTicket, IconWorkflow } from "@/components/icons";
+
 
 // Object type config
-const OBJECT_CONFIG: Record<string, { icon: string; label: string }> = {
-  CONTACT: { icon: "👤", label: "Contact" },
-  DEAL: { icon: "💰", label: "Deal" },
-  COMPANY: { icon: "🏢", label: "Company" },
-  TICKET: { icon: "🎫", label: "Ticket" },
-  CUSTOM: { icon: "⚙️", label: "Custom" },
-  UNKNOWN: { icon: "❓", label: "Other" },
+const OBJ_ICON_MAP: Record<string, (p: { className?: string }) => JSX.Element> = {
+  CONTACT: IconContact, DEAL: IconDeal, COMPANY: IconCompany, TICKET: IconTicket,
+};
+const OBJECT_CONFIG: Record<string, { label: string }> = {
+  CONTACT: { label: "Contact" },
+  DEAL: { label: "Deal" },
+  COMPANY: { label: "Company" },
+  TICKET: { label: "Ticket" },
+  CUSTOM: { label: "Custom" },
+  UNKNOWN: { label: "Other" },
 };
 
 const OBJECT_TYPE_COLORS: Record<string, string> = {
@@ -25,31 +30,31 @@ const OBJECT_TYPE_COLORS: Record<string, string> = {
 
 // Action display config
 const ACTION_DISPLAY: Record<string, { icon: string; label: string; bg: string; text: string; border: string }> = {
-  SET_PROPERTY:           { icon: "✏️", label: "Set property",       bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
-  CLEAR_PROPERTY:         { icon: "🗑️", label: "Clear property",     bg: "#F9FAFB", text: "#4B5563", border: "#E5E7EB" },
-  COPY_PROPERTY:          { icon: "📋", label: "Copy property",      bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
-  SEND_EMAIL:             { icon: "📧", label: "Send email",         bg: "#FAF5FF", text: "#7C3AED", border: "#DDD6FE" },
-  ENROLL_IN_WORKFLOW:     { icon: "➡️", label: "Enroll in workflow",  bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA" },
-  UNENROLL_FROM_WORKFLOW: { icon: "⏹️", label: "Unenroll",           bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA" },
-  ADD_TO_LIST:            { icon: "📝", label: "Add to list",        bg: "#ECFDF5", text: "#047857", border: "#A7F3D0" },
-  REMOVE_FROM_LIST:       { icon: "📝", label: "Remove from list",   bg: "#F9FAFB", text: "#4B5563", border: "#E5E7EB" },
-  IF_BRANCH:              { icon: "🔀", label: "If/then",            bg: "#FFFBEB", text: "#B45309", border: "#FDE68A" },
-  BRANCH:                 { icon: "🔀", label: "Branch",             bg: "#FFFBEB", text: "#B45309", border: "#FDE68A" },
-  DELAY:                  { icon: "⏱️", label: "Delay",              bg: "#F9FAFB", text: "#4B5563", border: "#E5E7EB" },
-  WEBHOOK:                { icon: "🔗", label: "Webhook",            bg: "#EEF2FF", text: "#4338CA", border: "#C7D2FE" },
-  CUSTOM_CODE:            { icon: "💻", label: "Custom code",        bg: "#EEF2FF", text: "#4338CA", border: "#C7D2FE" },
-  CREATE_TASK:            { icon: "📌", label: "Create task",        bg: "#ECFDF5", text: "#047857", border: "#A7F3D0" },
-  CREATE_DEAL:            { icon: "💰", label: "Create deal",        bg: "#ECFDF5", text: "#047857", border: "#A7F3D0" },
-  CREATE_TICKET:          { icon: "🎫", label: "Create ticket",      bg: "#ECFDF5", text: "#047857", border: "#A7F3D0" },
-  CREATE_COMPANY:         { icon: "🏢", label: "Create company",     bg: "#ECFDF5", text: "#047857", border: "#A7F3D0" },
-  SEND_INTERNAL_EMAIL:    { icon: "🔔", label: "Notify",             bg: "#FEFCE8", text: "#A16207", border: "#FEF08A" },
-  SEND_IN_APP_NOTIFICATION: { icon: "🔔", label: "Notify",           bg: "#FEFCE8", text: "#A16207", border: "#FEF08A" },
-  ROTATE_OWNER:           { icon: "🔄", label: "Rotate owner",      bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
-  FORMAT_DATA:            { icon: "🔧", label: "Format data",       bg: "#F9FAFB", text: "#4B5563", border: "#E5E7EB" },
-  DATA_ACTION:            { icon: "🔍", label: "Fetch data",        bg: "#EEF2FF", text: "#4338CA", border: "#C7D2FE" },
-  NOTIFICATION:           { icon: "🔔", label: "Notification",      bg: "#FEFCE8", text: "#A16207", border: "#FEF08A" },
-  ASSOCIATION:            { icon: "🔗", label: "Association",        bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
-  UNKNOWN:                { icon: "⚙️", label: "Action",             bg: "#F9FAFB", text: "#4B5563", border: "#E5E7EB" },
+  SET_PROPERTY:           { icon: "→", label: "Set property",       bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
+  CLEAR_PROPERTY:         { icon: "×", label: "Clear property",     bg: "#F9FAFB", text: "#4B5563", border: "#E5E7EB" },
+  COPY_PROPERTY:          { icon: "⊡", label: "Copy property",      bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
+  SEND_EMAIL:             { icon: "✉", label: "Send email",         bg: "#FAF5FF", text: "#7C3AED", border: "#DDD6FE" },
+  ENROLL_IN_WORKFLOW:     { icon: "↗", label: "Enroll in workflow",  bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA" },
+  UNENROLL_FROM_WORKFLOW: { icon: "↙", label: "Unenroll",           bg: "#FFF7ED", text: "#C2410C", border: "#FED7AA" },
+  ADD_TO_LIST:            { icon: "+", label: "Add to list",        bg: "#ECFDF5", text: "#047857", border: "#A7F3D0" },
+  REMOVE_FROM_LIST:       { icon: "−", label: "Remove from list",   bg: "#F9FAFB", text: "#4B5563", border: "#E5E7EB" },
+  IF_BRANCH:              { icon: "⑂", label: "If/then",            bg: "#FFFBEB", text: "#B45309", border: "#FDE68A" },
+  BRANCH:                 { icon: "⑂", label: "Branch",             bg: "#FFFBEB", text: "#B45309", border: "#FDE68A" },
+  DELAY:                  { icon: "◷", label: "Delay",              bg: "#F9FAFB", text: "#4B5563", border: "#E5E7EB" },
+  WEBHOOK:                { icon: "⟡", label: "Webhook",            bg: "#EEF2FF", text: "#4338CA", border: "#C7D2FE" },
+  CUSTOM_CODE:            { icon: "⟨⟩", label: "Custom code",       bg: "#EEF2FF", text: "#4338CA", border: "#C7D2FE" },
+  CREATE_TASK:            { icon: "☐", label: "Create task",        bg: "#ECFDF5", text: "#047857", border: "#A7F3D0" },
+  CREATE_DEAL:            { icon: "$", label: "Create deal",        bg: "#ECFDF5", text: "#047857", border: "#A7F3D0" },
+  CREATE_TICKET:          { icon: "▤", label: "Create ticket",      bg: "#ECFDF5", text: "#047857", border: "#A7F3D0" },
+  CREATE_COMPANY:         { icon: "◻", label: "Create company",     bg: "#ECFDF5", text: "#047857", border: "#A7F3D0" },
+  SEND_INTERNAL_EMAIL:    { icon: "◉", label: "Notify",             bg: "#FEFCE8", text: "#A16207", border: "#FEF08A" },
+  SEND_IN_APP_NOTIFICATION: { icon: "◉", label: "Notify",           bg: "#FEFCE8", text: "#A16207", border: "#FEF08A" },
+  ROTATE_OWNER:           { icon: "↻", label: "Rotate owner",      bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
+  FORMAT_DATA:            { icon: "≡", label: "Format data",       bg: "#F9FAFB", text: "#4B5563", border: "#E5E7EB" },
+  DATA_ACTION:            { icon: "◎", label: "Fetch data",        bg: "#EEF2FF", text: "#4338CA", border: "#C7D2FE" },
+  NOTIFICATION:           { icon: "◉", label: "Notification",      bg: "#FEFCE8", text: "#A16207", border: "#FEF08A" },
+  ASSOCIATION:            { icon: "⟷", label: "Association",        bg: "#EFF6FF", text: "#1D4ED8", border: "#BFDBFE" },
+  UNKNOWN:                { icon: "•", label: "Action",             bg: "#F9FAFB", text: "#4B5563", border: "#E5E7EB" },
 };
 
 function getActionStyle(actionType: string) {
@@ -176,7 +181,7 @@ function ExpandedWorkflowNode({ data, selected }: ExpandedWorkflowNodeProps) {
       <div className="px-4 py-3 flex-shrink-0" style={{ background: `linear-gradient(135deg, ${headerColor}, ${headerColor}dd)` }}>
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-base">{objConfig.icon}</span>
+            {OBJ_ICON_MAP[data.objectType] ? OBJ_ICON_MAP[data.objectType]({ className: "w-4 h-4 text-white" }) : <IconWorkflow className="w-4 h-4 text-white" />}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-bold text-white leading-tight truncate" title={data.name}>
@@ -220,7 +225,7 @@ function ExpandedWorkflowNode({ data, selected }: ExpandedWorkflowNodeProps) {
       {data.healthIssues && data.healthIssues.length > 0 && data.healthGrade && "CDF".includes(data.healthGrade) && (
         <div className="px-3 py-1.5 flex-shrink-0 flex items-start gap-1.5"
           style={{ background: data.healthGrade === "F" ? "#FEF2F2" : data.healthGrade === "D" ? "#FFF7ED" : "#FFFBEB" }}>
-          <span className="text-[9px] mt-px flex-shrink-0">{data.healthGrade === "F" ? "🔴" : data.healthGrade === "D" ? "🟠" : "🟡"}</span>
+          <span className="w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0" style={{ backgroundColor: data.healthGrade === "F" ? "#DC2626" : data.healthGrade === "D" ? "#EA580C" : "#D97706" }} />
           <p className="text-[9px] leading-snug"
             style={{ color: data.healthGrade === "F" ? "#991B1B" : data.healthGrade === "D" ? "#9A3412" : "#92400E" }}>
             {data.healthIssues.slice(0, 2).join(" · ")}

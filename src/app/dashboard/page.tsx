@@ -5,6 +5,7 @@ import NavBar from "@/components/NavBar";
 import SyncBar from "@/components/SyncBar";
 import UpgradeButton from "@/components/UpgradeButton";
 import { getPlan } from "@/lib/plans";
+import { IconMap, IconAnalyst, IconTimeline, IconChangelog, IconConflict, IconCheck, CHANGELOG_ICONS } from "@/components/icons";
 
 interface DashboardPageProps {
   searchParams: { portal?: string; connected?: string };
@@ -14,103 +15,57 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const portalId = searchParams.portal;
 
   if (!portalId) {
-    // Try to find the most recently connected portal
     const latestPortal = await prisma.portal.findFirst({
       orderBy: { updatedAt: "desc" },
       select: { id: true },
     });
-    if (latestPortal) {
-      redirect(`/dashboard?portal=${latestPortal.id}`);
-    }
+    if (latestPortal) redirect(`/dashboard?portal=${latestPortal.id}`);
     redirect("/connect");
   }
 
   const portal = await prisma.portal.findUnique({
     where: { id: portalId },
     select: {
-      id: true,
-      name: true,
-      hubspotPortalId: true,
-      syncStatus: true,
-      syncMessage: true,
-      lastSyncedAt: true,
-      planTier: true,
+      id: true, name: true, hubspotPortalId: true,
+      syncStatus: true, syncMessage: true, lastSyncedAt: true, planTier: true,
     },
   });
 
-  if (!portal) {
-    redirect("/connect");
-  }
+  if (!portal) redirect("/connect");
 
-  // Fetch stats
   const [workflowStats, dependencyCount, conflictStats, recentSync, recentChanges] =
     await Promise.all([
-      prisma.workflow.groupBy({
-        by: ["status"],
-        where: { portalId },
-        _count: true,
-      }),
+      prisma.workflow.groupBy({ by: ["status"], where: { portalId }, _count: true }),
       prisma.dependency.count({ where: { portalId } }),
-      prisma.conflict.groupBy({
-        by: ["severity"],
-        where: { portalId },
-        _count: true,
-      }),
-      prisma.syncLog.findFirst({
-        where: { portalId },
-        orderBy: { startedAt: "desc" },
-      }),
-      prisma.changelogEntry.findMany({
-        where: { portalId },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      }).catch(() => []),
+      prisma.conflict.groupBy({ by: ["severity"], where: { portalId }, _count: true }),
+      prisma.syncLog.findFirst({ where: { portalId }, orderBy: { startedAt: "desc" } }),
+      prisma.changelogEntry.findMany({ where: { portalId }, orderBy: { createdAt: "desc" }, take: 5 }).catch(() => []),
     ]);
 
   const totalWorkflows = workflowStats.reduce((sum, s) => sum + s._count, 0);
-  const activeWorkflows =
-    workflowStats.find((s) => s.status === "ACTIVE")?._count || 0;
-  const inactiveWorkflows =
-    workflowStats.find((s) => s.status === "INACTIVE")?._count || 0;
-
+  const activeWorkflows = workflowStats.find((s) => s.status === "ACTIVE")?._count || 0;
+  const inactiveWorkflows = workflowStats.find((s) => s.status === "INACTIVE")?._count || 0;
   const totalConflicts = conflictStats.reduce((sum, s) => sum + s._count, 0);
-  const criticalConflicts =
-    conflictStats.find((s) => s.severity === "CRITICAL")?._count || 0;
-  const warningConflicts =
-    conflictStats.find((s) => s.severity === "WARNING")?._count || 0;
+  const criticalConflicts = conflictStats.find((s) => s.severity === "CRITICAL")?._count || 0;
+  const warningConflicts = conflictStats.find((s) => s.severity === "WARNING")?._count || 0;
 
-  // Get most complex workflows (highest dependency count)
   const topWorkflows = await prisma.workflow.findMany({
     where: { portalId },
     select: {
-      id: true,
-      name: true,
-      status: true,
-      objectType: true,
-      actionCount: true,
-      _count: {
-        select: {
-          sourceDependencies: true,
-          targetDependencies: true,
-          conflictWorkflows: true,
-        },
-      },
+      id: true, name: true, status: true, objectType: true, actionCount: true,
+      _count: { select: { sourceDependencies: true, targetDependencies: true, conflictWorkflows: true } },
     },
     orderBy: { sourceDependencies: { _count: "desc" } },
     take: 5,
   });
 
-  const isSyncing = portal.syncStatus === "SYNCING";
-  const justConnected = searchParams.connected === "true";
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Nav */}
+    <div className="min-h-screen bg-[#FAFAFA]">
       <NavBar portalId={portalId} portalName={portal.name || undefined} />
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        {/* Sync progress */}
-        <div className="mb-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {/* Sync */}
+        <div className="mb-5">
           <SyncBar
             portalId={portalId}
             planTier={portal.planTier}
@@ -120,220 +75,126 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           />
         </div>
 
-        {/* Upgrade banner for free users */}
+        {/* Upgrade banner */}
         {portal.planTier === "FREE" && totalWorkflows > 0 && (
-          <div className="mb-6 px-5 py-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">⚡</span>
-              <div>
-                <p className="text-sm font-bold text-amber-900">You{"'"}re on the Free plan ({getPlan("FREE").workflowLimit} workflow limit)</p>
-                <p className="text-xs text-amber-700 mt-0.5">Upgrade from $9/mo for unlimited syncs, tagging, exports, and up to 300 workflows.</p>
-              </div>
+          <div className="mb-5 px-4 py-3 bg-white border border-amber-200 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Free plan — {getPlan("FREE").workflowLimit} workflow limit</p>
+              <p className="text-xs text-gray-500 mt-0.5">Upgrade for unlimited syncs, tagging, exports, and up to 300 workflows.</p>
             </div>
             <UpgradeButton portalId={portalId}
-              className="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-semibold text-white hover:shadow-md transition-all bg-[#FF7A59]">
-              View Plans
+              className="flex-shrink-0 px-3 py-1.5 rounded-md text-xs font-medium text-white bg-gray-900 hover:bg-gray-800 transition-colors">
+              Upgrade
             </UpgradeButton>
           </div>
         )}
 
-        {/* Stats grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <StatCard
-            label="Total Workflows"
-            value={totalWorkflows}
-            sub={`${activeWorkflows} active, ${inactiveWorkflows} inactive`}
-            color="blue"
-          />
-          <StatCard
-            label="Dependencies"
-            value={dependencyCount}
-            sub="Cross-workflow relationships"
-            color="purple"
-          />
-          <Link
-              href={`/analyst?portal=${portalId}`}
-              className="group block p-5 bg-white border border-gray-200 rounded-xl hover:border-violet-300 hover:shadow-md transition-all"
-            >
-              <span className="text-2xl">🔬</span>
-              <h3 className="text-sm font-semibold text-gray-900 group-hover:text-violet-700 mt-2">AI Analyst</h3>
-              <p className="text-xs text-gray-500 mt-1">Health scores & deep analysis for {totalWorkflows} workflows</p>
-            </Link>
-            <Link
-              href={`/timeline?portal=${portalId}`}
-              className="group block p-5 bg-white border border-gray-200 rounded-xl hover:border-violet-300 hover:shadow-md transition-all"
-            >
-              <span className="text-2xl">🔄</span>
-              <h3 className="text-sm font-semibold text-gray-900 group-hover:text-violet-700 mt-2">Flow Timeline</h3>
-              <p className="text-xs text-gray-500 mt-1">See the execution order of your automations</p>
-            </Link>
-          <StatCard
+        {/* Metrics */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <Metric label="Workflows" value={totalWorkflows} detail={`${activeWorkflows} active · ${inactiveWorkflows} inactive`} />
+          <Metric label="Dependencies" value={dependencyCount} detail="Cross-workflow links" />
+          <Metric
             label="Conflicts"
             value={totalConflicts}
-            sub={
-              criticalConflicts > 0
-                ? `${criticalConflicts} critical, ${warningConflicts} warnings`
-                : totalConflicts > 0
-                ? `${warningConflicts} warnings`
-                : "No issues detected"
-            }
-            color={criticalConflicts > 0 ? "red" : totalConflicts > 0 ? "amber" : "green"}
+            detail={criticalConflicts > 0 ? `${criticalConflicts} critical` : totalConflicts > 0 ? `${warningConflicts} warnings` : "All clear"}
+            alert={criticalConflicts > 0}
           />
-          <StatCard
-            label="Last Sync"
-            value={
-              portal.lastSyncedAt
-                ? timeAgo(new Date(portal.lastSyncedAt))
-                : "Never"
-            }
-            sub={
-              recentSync?.durationMs
-                ? `Took ${(recentSync.durationMs / 1000).toFixed(1)}s`
-                : ""
-            }
-            color="gray"
+          <Metric
+            label="Last sync"
+            value={portal.lastSyncedAt ? timeAgo(new Date(portal.lastSyncedAt)) : "Never"}
+            detail={recentSync?.durationMs ? `${(recentSync.durationMs / 1000).toFixed(1)}s` : ""}
           />
         </div>
 
         {/* Quick actions */}
         {totalWorkflows > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mb-8">
-            <Link
-              href={`/map?portal=${portalId}`}
-              className="group block p-5 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all"
-            >
-              <span className="text-2xl">🗺️</span>
-              <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 mt-2">Workflow Map</h3>
-              <p className="text-xs text-gray-500 mt-1">{totalWorkflows} workflows, {dependencyCount} dependencies</p>
-            </Link>
-
-            <Link
-              href={`/map?portal=${portalId}`}
-              className="group block p-5 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all"
-            >
-              <span className="text-2xl">🎯</span>
-              <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 mt-2">Property Impact</h3>
-              <p className="text-xs text-gray-500 mt-1">View property conflicts in the map sidebar</p>
-            </Link>
-
-            <Link
-              href={`/changelog?portal=${portalId}`}
-              className="group block p-5 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all"
-            >
-              <span className="text-2xl">📋</span>
-              <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 mt-2">Changelog</h3>
-              <p className="text-xs text-gray-500 mt-1">{recentChanges.length > 0 ? `${recentChanges.length} recent changes` : "Track workflow changes"}</p>
-            </Link>
-
-            <Link
-              href={`/conflicts?portal=${portalId}`}
-              className="group block p-5 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all"
-            >
-              <span className="text-2xl">{criticalConflicts > 0 ? "🔴" : totalConflicts > 0 ? "⚠️" : "✅"}</span>
-              <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 mt-2">
-                {totalConflicts > 0 ? `${totalConflicts} Conflict${totalConflicts !== 1 ? "s" : ""}` : "No Conflicts"}
-              </h3>
-              <p className="text-xs text-gray-500 mt-1">
-                {criticalConflicts > 0 ? `${criticalConflicts} critical` : totalConflicts > 0 ? `${warningConflicts} warnings` : "All clear"}
-              </p>
-            </Link>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <ActionCard href={`/map?portal=${portalId}`} label="Workflow Map" detail={`${totalWorkflows} workflows`} icon={<IconMap className="w-4 h-4 text-gray-400" />} />
+            <ActionCard href={`/analyst?portal=${portalId}`} label="AI Analyst" detail="Health scores & analysis" icon={<IconAnalyst className="w-4 h-4 text-gray-400" />} />
+            <ActionCard href={`/timeline?portal=${portalId}`} label="Flow Timeline" detail="Execution order" icon={<IconTimeline className="w-4 h-4 text-gray-400" />} />
+            <ActionCard href={`/changelog?portal=${portalId}`} label="Changelog" detail={recentChanges.length > 0 ? `${recentChanges.length} recent` : "Track changes"} icon={<IconChangelog className="w-4 h-4 text-gray-400" />} />
           </div>
         )}
 
-        {/* Most complex workflows */}
+        {/* Most connected workflows */}
         {topWorkflows.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-900">
-                Most Connected Workflows
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Workflows with the most dependencies — these are the ones to watch.
-              </p>
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-6">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-gray-900">Most connected workflows</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Highest dependency count — watch these closely.</p>
+              </div>
+              <Link href={`/map?portal=${portalId}`} className="text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                Open map →
+              </Link>
             </div>
             <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px]">
-              <thead>
-                <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <th className="px-6 py-3">Workflow</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3">Type</th>
-                  <th className="px-6 py-3">Actions</th>
-                  <th className="px-6 py-3">Dependencies</th>
-                  <th className="px-6 py-3">Conflicts</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {topWorkflows.map((wf) => {
-                  const depCount =
-                    wf._count.sourceDependencies + wf._count.targetDependencies;
-                  return (
-                    <tr key={wf.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-3">
-                        <span className="text-sm font-medium text-gray-900">
-                          {wf.name}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3">
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            wf.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {wf.status.toLowerCase()}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3 text-sm text-gray-600">
-                        {wf.objectType.charAt(0) +
-                          wf.objectType.slice(1).toLowerCase()}
-                      </td>
-                      <td className="px-6 py-3 text-sm text-gray-600">
-                        {wf.actionCount}
-                      </td>
-                      <td className="px-6 py-3 text-sm text-gray-600">
-                        {depCount}
-                      </td>
-                      <td className="px-6 py-3">
-                        {wf._count.conflictWorkflows > 0 ? (
-                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-50 text-red-700">
-                            {wf._count.conflictWorkflows}
+              <table className="w-full min-w-[540px]">
+                <thead>
+                  <tr className="text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                    <th className="px-4 py-2.5">Workflow</th>
+                    <th className="px-4 py-2.5">Status</th>
+                    <th className="px-4 py-2.5">Type</th>
+                    <th className="px-4 py-2.5 text-right">Actions</th>
+                    <th className="px-4 py-2.5 text-right">Deps</th>
+                    <th className="px-4 py-2.5 text-right">Conflicts</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {topWorkflows.map((wf) => {
+                    const depCount = wf._count.sourceDependencies + wf._count.targetDependencies;
+                    return (
+                      <tr key={wf.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-4 py-2.5">
+                          <span className="text-sm text-gray-900">{wf.name}</span>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className={`inline-flex items-center gap-1 text-xs ${wf.status === "ACTIVE" ? "text-emerald-600" : "text-gray-400"}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${wf.status === "ACTIVE" ? "bg-emerald-500" : "bg-gray-300"}`} />
+                            {wf.status.toLowerCase()}
                           </span>
-                        ) : (
-                          <span className="text-xs text-gray-400">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-gray-500">
+                          {wf.objectType.charAt(0) + wf.objectType.slice(1).toLowerCase()}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-gray-500 text-right tabular-nums">{wf.actionCount}</td>
+                        <td className="px-4 py-2.5 text-xs text-gray-500 text-right tabular-nums">{depCount}</td>
+                        <td className="px-4 py-2.5 text-right">
+                          {wf._count.conflictWorkflows > 0 ? (
+                            <span className="text-xs font-medium text-red-600 tabular-nums">{wf._count.conflictWorkflows}</span>
+                          ) : (
+                            <span className="text-xs text-gray-300">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
-        {/* Recent Changes */}
+        {/* Recent changes */}
         {recentChanges.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mt-8">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-900">Recent Changes</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Latest workflow modifications detected during sync</p>
-              </div>
-              <Link href={`/changelog?portal=${portalId}`} className="text-xs font-medium text-blue-600 hover:text-blue-700">
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-6">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-sm font-medium text-gray-900">Recent changes</h3>
+              <Link href={`/changelog?portal=${portalId}`} className="text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">
                 View all →
               </Link>
             </div>
             <div className="divide-y divide-gray-50">
               {recentChanges.map((change: any) => {
-                const icons: Record<string, string> = { WORKFLOW_CREATED: "🆕", STATUS_CHANGE: "🔄", RENAMED: "✏️", ACTION_ADDED: "➕", ACTION_REMOVED: "➖", ACTION_MODIFIED: "🔧", ENROLLMENT_CHANGED: "📥" };
+                const ChangeIcon = CHANGELOG_ICONS[change.changeType] || IconChangelog;
                 return (
-                  <div key={change.id} className="px-6 py-3 flex items-start gap-3">
-                    <span className="text-base mt-0.5">{icons[change.changeType] || "📋"}</span>
+                  <div key={change.id} className="px-4 py-2.5 flex items-start gap-3 hover:bg-gray-50/50 transition-colors">
+                    <ChangeIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-900">{change.summary}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">in <span className="font-medium">{change.workflowName}</span> · {new Date(change.createdAt).toLocaleString()}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {change.workflowName} · {new Date(change.createdAt).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
                 );
@@ -341,13 +202,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </div>
           </div>
         )}
-        {/* Portal management */}
-        <div className="mt-8 pt-6 border-t border-gray-200 flex items-center justify-between">
+
+        {/* Footer */}
+        <div className="pt-4 border-t border-gray-200 flex items-center justify-between">
           <p className="text-xs text-gray-400">
-            Portal: {portal.name || portal.hubspotPortalId} · Plan: {portal.planTier}
+            {portal.name || portal.hubspotPortalId} · {portal.planTier.toLowerCase()}
           </p>
-          <Link href={`/pricing?portal=${portalId}`} className="text-xs text-gray-500 hover:text-gray-700">
-            Manage Plan
+          <Link href={`/pricing?portal=${portalId}`} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            Manage plan
           </Link>
         </div>
       </main>
@@ -355,51 +217,26 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   );
 }
 
-// --- Helper Components ---
+// ── Components ──
 
-function StatCard({
-  label,
-  value,
-  sub,
-  color,
-}: {
-  label: string;
-  value: number | string;
-  sub: string;
-  color: string;
-}) {
-  const colorMap: Record<string, string> = {
-    blue: "border-blue-200 bg-blue-50",
-    purple: "border-purple-200 bg-purple-50",
-    red: "border-red-200 bg-red-50",
-    amber: "border-amber-200 bg-amber-50",
-    green: "border-emerald-200 bg-emerald-50",
-    gray: "border-gray-200 bg-white",
-  };
-
-  const valueColorMap: Record<string, string> = {
-    blue: "text-blue-900",
-    purple: "text-purple-900",
-    red: "text-red-900",
-    amber: "text-amber-900",
-    green: "text-emerald-900",
-    gray: "text-gray-900",
-  };
-
+function Metric({ label, value, detail, alert }: { label: string; value: number | string; detail: string; alert?: boolean }) {
   return (
-    <div
-      className={`rounded-xl border px-4 py-4 ${colorMap[color] || colorMap.gray}`}
-    >
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-        {label}
-      </p>
-      <p
-        className={`text-2xl font-bold mt-1 ${valueColorMap[color] || "text-gray-900"}`}
-      >
-        {value}
-      </p>
-      {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
+    <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
+      <p className="text-xs text-gray-500 mb-1">{label}</p>
+      <p className={`text-2xl font-semibold tabular-nums ${alert ? "text-red-600" : "text-gray-900"}`}>{value}</p>
+      {detail && <p className="text-xs text-gray-400 mt-0.5">{detail}</p>}
     </div>
+  );
+}
+
+function ActionCard({ href, label, detail, icon }: { href: string; label: string; detail: string; icon?: React.ReactNode }) {
+  return (
+    <Link href={href}
+      className="group bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-gray-300 hover:shadow-sm transition-all">
+      {icon && <div className="mb-2">{icon}</div>}
+      <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">{label}</p>
+      <p className="text-xs text-gray-400 mt-0.5">{detail}</p>
+    </Link>
   );
 }
 

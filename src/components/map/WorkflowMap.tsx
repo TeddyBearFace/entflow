@@ -31,6 +31,7 @@ import ProGate, { ProBadge } from "@/components/ProGate";
 import { usePlan } from "@/hooks/usePlan";
 import type { MapFilters, WorkflowNodeData } from "@/types";
 import type { StageGroup } from "@/lib/journey";
+import { IconChangelog, IconAnalyst, IconTimeline, IconSync, IconExport } from "@/components/icons";
 
 function getEdgeMarkers(markerType: string, color: string) {
   const arrow = { type: "arrowclosed" as any, color, width: 18, height: 18 };
@@ -1189,10 +1190,10 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                     <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
                     <div className="absolute top-full right-0 mt-1 w-52 bg-white rounded-xl shadow-lg border border-gray-200 py-1.5 z-40">
                       <a href={`/changelog?portal=${portalId}`} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors">
-                        📋 Changelog
+                        <IconChangelog className="w-3.5 h-3.5" /> Changelog
                       </a>
                       <a href={`/analyst?portal=${portalId}`} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-violet-50 hover:text-violet-700 flex items-center gap-2 transition-colors">
-                        🔬 AI Analyst
+                        <IconAnalyst className="w-3.5 h-3.5" /> Analyst
                       </a>
                       <button onClick={() => { setSequencePanel(true); setMenuOpen(false); if (!sequenceData) runLifecycleSort(); }}
                         disabled={sequenceLoading}
@@ -1206,7 +1207,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                       <div className="border-t border-gray-100 my-1" />
                       <ProBadge allowed={canUse("autoSync")} portalId={portalId} feature="Auto-sync">
                         <button onClick={() => { toggleAutoSync(); setMenuOpen(false); }} className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${autoSync.enabled ? "text-emerald-700" : "text-gray-700 hover:bg-gray-50"}`}>
-                          {autoSync.enabled ? "🔄 Auto-sync on" : "⏸️ Auto-sync off"}
+                          {autoSync.enabled ? "<IconSync className="w-3.5 h-3.5" /> Auto-sync on" : "<IconSync className="w-3.5 h-3.5" /> Auto-sync on"}
                         </button>
                       </ProBadge>
                       <div className="border-t border-gray-100 my-1" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { IconLock, IconBolt } from "@/components/icons";
 
 interface ProGateProps {
   /** Whether the user can use this feature */
@@ -57,7 +58,7 @@ export default function ProGate({ allowed, portalId, feature, children, badge = 
         </div>
         {badge && (
           <span className="absolute -top-1 -right-1 z-10 flex items-center gap-0.5 text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-px">
-            ⚡ Pro
+            <IconBolt className="w-3 h-3 inline" /> Pro
           </span>
         )}
       </div>
@@ -71,7 +72,7 @@ export default function ProGate({ allowed, portalId, feature, children, badge = 
             <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-l border-t border-gray-200 rotate-45" />
             <div className="relative">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-base">⚡</span>
+                <IconBolt className="w-4 h-4 text-amber-500" />
                 <span className="text-sm font-bold text-gray-900">Paid Feature</span>
               </div>
               <p className="text-xs text-gray-500 leading-relaxed mb-3">
@@ -123,7 +124,7 @@ export function ProBadge({ allowed, portalId, feature, children, className }: Om
         style={{ opacity: 0.6 }}
       >
         <div className="pointer-events-none">{children}</div>
-        <span className="text-[8px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded px-0.5 leading-none py-px">⚡</span>
+        <span className="text-[8px] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded px-0.5 leading-none py-px flex items-center gap-0.5"><IconBolt className="w-2.5 h-2.5" />Pro</span>
       </div>
 
       {showPopover && (
@@ -132,7 +133,7 @@ export function ProBadge({ allowed, portalId, feature, children, className }: Om
           <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-[70] bg-white rounded-lg shadow-xl border border-gray-200 p-3 w-[200px]">
             <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-white border-l border-t border-gray-200 rotate-45" />
             <p className="text-xs text-gray-600 mb-2 relative">
-              <strong className="text-gray-900">⚡ {feature || "Paid"}</strong> — upgrade to unlock.
+              <strong className="text-gray-900"><IconBolt className="w-3.5 h-3.5 inline" /> {feature || "Paid"}</strong> — upgrade to unlock.
             </p>
             <button onClick={goToPricing}
               className="w-full py-1.5 rounded-md text-xs font-semibold text-white"

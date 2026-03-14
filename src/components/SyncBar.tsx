@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { IconSync } from "@/components/icons";
 
 interface SyncStatus {
   status: string;
