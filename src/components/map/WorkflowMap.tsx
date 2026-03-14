@@ -66,7 +66,7 @@ export default function WorkflowMap({ portalId, portalName }: WorkflowMapProps) 
           </a>
         </div>
       </div>
-      <div className="hidden md:flex flex-1 h-full">
+      <div className="hidden md:flex flex-1 h-full min-h-0">
         <ReactFlowProvider>
           <WorkflowMapInner portalId={portalId} portalName={portalName} />
         </ReactFlowProvider>
@@ -977,7 +977,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
     : null;
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-1 h-full min-h-0">
       {/* Filter + Property Impact Sidebar */}
       <FilterSidebar
         filters={filters}
