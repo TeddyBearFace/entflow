@@ -44,6 +44,17 @@ export default function WelcomePage() {
       const isComplete = data.status === "COMPLETED" || 
         (data.status === "SYNCING" && data.progress > 0 && data.total > 0 && data.progress >= data.total);
       
+      // If sync hasn't started yet (null/IDLE), keep waiting
+      // If status is unknown but lastSyncedAt exists, treat as complete
+      if (!isComplete && !data.status && data.lastSyncedAt) {
+        setPhase("done");
+        setShowConfetti(true);
+        setTimeout(() => setStep(1), 800);
+        setTimeout(() => setStep(2), 1600);
+        setTimeout(() => setStep(3), 2400);
+        return;
+      }
+
       if (isComplete) {
         setPhase("done");
         setShowConfetti(true);
@@ -69,6 +80,25 @@ export default function WelcomePage() {
         setPhase("error");
         return;
       }
+
+      // Status is null or unexpected — if portal has been synced before, treat as done
+      if (!data.status || (data.status !== "SYNCING" && data.lastSyncedAt)) {
+        setPhase("done");
+        setShowConfetti(true);
+        const statsRes = await fetch(`/api/graph?portalId=${portalId}`);
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          setWorkflowCount(statsData.stats?.totalWorkflows || statsData.nodes?.length || 0);
+          setDepCount(statsData.stats?.totalDependencies || statsData.edges?.length || 0);
+          setConflictCount(statsData.stats?.totalConflicts || 0);
+        }
+        if (data.portalName) setPortalName(data.portalName);
+        setTimeout(() => setStep(1), 800);
+        setTimeout(() => setStep(2), 1600);
+        setTimeout(() => setStep(3), 2400);
+        return;
+      }
+      
     } catch {}
   }, [portalId]);
 
