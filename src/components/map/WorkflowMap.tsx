@@ -99,6 +99,9 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
   const reactFlowInstance = useReactFlow();
   const { canUse, isFree, plan } = usePlan(portalId);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sequenceData, setSequenceData] = useState<any>(null);
+  const [sequenceLoading, setSequenceLoading] = useState(false);
+  const [sequencePanel, setSequencePanel] = useState(false);
   const [filters, setFilters] = useState<MapFilters>({
     status: [],
     objectTypes: [],
@@ -498,6 +501,111 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
     const res = await fetch("/api/auto-sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ portalId, action: "toggle" }) });
     if (res.ok) { const data = await res.json(); setAutoSync(prev => ({ ...prev, enabled: data.autoSyncEnabled })); }
   };
+  const runLifecycleSort = useCallback(async () => {
+    setMenuOpen(false);
+    setSequenceLoading(true);
+    setSequencePanel(true);
+    try {
+      // Gather workflow data for the AI
+      const workflowNodes = nodes.filter(n => n.type === "expandedWorkflow");
+      const workflows = workflowNodes.map(n => ({
+        id: n.id,
+        name: (n.data as any)?.name || "Unknown",
+        objectType: (n.data as any)?.objectType || "contact",
+        enrollmentCriteria: (n.data as any)?.enrollmentCriteria,
+        definition: {
+          steps: (n.data as any)?.actions || [],
+          enrollmentCriteria: (n.data as any)?.enrollmentCriteria,
+        },
+      }));
+
+      // If we don't have enough data from nodes, fetch from API
+      let workflowPayload = workflows;
+      if (workflows.length === 0 || !workflows[0].enrollmentCriteria) {
+        const res = await fetch(`/api/analyst/workflows?portalId=${portalId}`);
+        if (res.ok) {
+          const data = await res.json();
+          workflowPayload = (data.workflows || []).map((w: any) => ({
+            id: w.id,
+            name: w.name,
+            objectType: w.objectType,
+            enrollmentCriteria: w.enrollmentCriteria,
+            definition: w.definition,
+          }));
+        }
+      }
+
+      const res = await fetch("/api/analyst/sequence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workflows: workflowPayload }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("[sequence] Error:", err);
+        setSequenceLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      setSequenceData(data.sequence);
+    } catch (err) {
+      console.error("[sequence] Failed:", err);
+    } finally {
+      setSequenceLoading(false);
+    }
+  }, [nodes, portalId]);
+
+  const applyAutoLayout = useCallback(() => {
+    if (!sequenceData?.sequence) return;
+
+    const seq = sequenceData.sequence as Array<{ workflowId: string; position: number; stage: string }>;
+
+    // Group by stage
+    const stages = new Map<string, string[]>();
+    for (const item of seq) {
+      if (!stages.has(item.stage)) stages.set(item.stage, []);
+      stages.get(item.stage)!.push(item.workflowId);
+    }
+
+    // Layout: stages as columns, workflows stacked vertically
+    const COL_WIDTH = 360;
+    const ROW_HEIGHT = 200;
+    const START_X = 100;
+    const START_Y = 100;
+
+    const newPositions: Array<{ nodeId: string; positionX: number; positionY: number }> = [];
+    let colIndex = 0;
+
+    for (const [, workflowIds] of stages) {
+      workflowIds.forEach((wfId, rowIndex) => {
+        const x = START_X + colIndex * COL_WIDTH;
+        const y = START_Y + rowIndex * ROW_HEIGHT;
+        newPositions.push({ nodeId: wfId, positionX: x, positionY: y });
+      });
+      colIndex++;
+    }
+
+    // Update node positions on canvas
+    setNodes(nds => nds.map(n => {
+      const pos = newPositions.find(p => p.nodeId === n.id);
+      if (pos) return { ...n, position: { x: pos.positionX, y: pos.positionY } };
+      return n;
+    }));
+
+    // Save positions to DB
+    fetch("/api/positions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ portalId, positions: newPositions }),
+    }).catch(() => {});
+
+    // Fit view after layout
+    setTimeout(() => {
+      reactFlowInstance.fitView({ padding: 0.3, duration: 500 });
+    }, 100);
+  }, [sequenceData, setNodes, portalId, reactFlowInstance]);
 
   const matchTypeIcons: Record<string, string> = { workflow_name: "📋", action: "⚡", property: "✏️", email: "📧", list: "📝", enrollment: "📥" };
 
@@ -977,6 +1085,14 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                       <a href={`/analyst?portal=${portalId}`} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-violet-50 hover:text-violet-700 flex items-center gap-2 transition-colors">
                         🔬 AI Analyst
                       </a>
+                      <button onClick={runLifecycleSort} disabled={sequenceLoading}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-violet-50 hover:text-violet-700 flex items-center gap-2 transition-colors disabled:opacity-50">
+                        {sequenceLoading ? (
+                          <><div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-violet-300 border-t-violet-600" /> Sorting...</>
+                        ) : (
+                          <>🔄 AI Lifecycle Sort</>
+                        )}
+                      </button>
                       <div className="border-t border-gray-100 my-1" />
                       <ProBadge allowed={canUse("autoSync")} portalId={portalId} feature="Auto-sync">
                         <button onClick={() => { toggleAutoSync(); setMenuOpen(false); }} className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${autoSync.enabled ? "text-emerald-700" : "text-gray-700 hover:bg-gray-50"}`}>
@@ -1193,7 +1309,138 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
           </div>
         </div>
       )}
+{/* Lifecycle Sequence Panel */}
+      {sequencePanel && (
+        <div className="w-80 border-l border-gray-200 bg-white flex flex-col flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <div>
+              <h3 className="font-semibold text-sm text-gray-900">Lifecycle Order</h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">AI-sorted workflow sequence</p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {sequenceData && !sequenceLoading && (
+                <button onClick={applyAutoLayout}
+                  className="px-2.5 py-1 text-[10px] font-semibold text-white rounded-md hover:shadow-md transition-all"
+                  style={{ background: "linear-gradient(135deg, #7C3AED, #DB2777)" }}>
+                  Auto-layout
+                </button>
+              )}
+              <button onClick={() => setSequencePanel(false)} className="p-1 rounded hover:bg-gray-100 text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
 
+          {sequenceLoading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-violet-300 border-t-violet-600 mx-auto mb-3" />
+                <p className="text-xs text-gray-500">AI is analysing your workflows...</p>
+                <p className="text-[10px] text-gray-400 mt-1">This may take 10-20 seconds</p>
+              </div>
+            </div>
+          ) : sequenceData?.sequence ? (
+            <div className="flex-1 overflow-y-auto">
+              {/* Lifecycle summary */}
+              {sequenceData.lifecycle_summary && (
+                <div className="px-4 py-3 border-b border-gray-100 bg-violet-50/50">
+                  <p className="text-xs text-violet-700 leading-relaxed">{sequenceData.lifecycle_summary}</p>
+                </div>
+              )}
+
+              {/* Sorted workflows */}
+              <div className="px-3 py-2">
+                {(() => {
+                  const seq = sequenceData.sequence as Array<{
+                    workflowId: string; position: number; stage: string;
+                    triggeredBy?: string | null; triggers?: string[]; reasoning: string;
+                  }>;
+                  const sorted = [...seq].sort((a, b) => a.position - b.position);
+                  let currentStage = "";
+
+                  return sorted.map((item, idx) => {
+                    const showStage = item.stage !== currentStage;
+                    currentStage = item.stage;
+                    const node = nodes.find(n => n.id === item.workflowId);
+                    const name = (node?.data as any)?.name || item.workflowId;
+
+                    const STAGE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+                      "Lead Capture": { bg: "#EFF6FF", text: "#2563EB", border: "#BFDBFE" },
+                      "Enrichment": { bg: "#F0FDF4", text: "#15803D", border: "#BBF7D0" },
+                      "Nurture": { bg: "#FAF5FF", text: "#7C3AED", border: "#DDD6FE" },
+                      "Qualification": { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" },
+                      "Sales Handoff": { bg: "#FFF7ED", text: "#EA580C", border: "#FED7AA" },
+                      "Onboarding": { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" },
+                      "Retention": { bg: "#EFF6FF", text: "#2563EB", border: "#BFDBFE" },
+                      "Notification": { bg: "#F9FAFB", text: "#6B7280", border: "#E5E7EB" },
+                    };
+                    const sc = STAGE_COLORS[item.stage] || { bg: "#F9FAFB", text: "#6B7280", border: "#E5E7EB" };
+
+                    return (
+                      <div key={item.workflowId}>
+                        {showStage && (
+                          <div className="flex items-center gap-2 mt-3 mb-1.5 first:mt-0">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                              style={{ background: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
+                              {item.stage}
+                            </span>
+                            <div className="flex-1 h-px bg-gray-100" />
+                          </div>
+                        )}
+                        <button
+                          onClick={() => {
+                            setSelectedWorkflow(item.workflowId);
+                            const n = nodes.find(nd => nd.id === item.workflowId);
+                            if (n) {
+                              reactFlowInstance.setCenter(n.position.x + 140, n.position.y + 70, { zoom: 1, duration: 500 });
+                            }
+                          }}
+                          className="w-full text-left rounded-lg border border-gray-100 hover:border-gray-200 hover:shadow-sm p-2.5 mb-1.5 transition-all group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                              style={{ background: sc.bg, color: sc.text }}>
+                              {item.position}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-gray-900 truncate group-hover:text-violet-700 transition-colors">{name}</p>
+                              <p className="text-[10px] text-gray-400 leading-relaxed mt-0.5">{item.reasoning}</p>
+                            </div>
+                          </div>
+                          {/* Trigger chain arrows */}
+                          {item.triggers && item.triggers.length > 0 && (
+                            <div className="mt-1.5 pl-8">
+                              {item.triggers.map(tId => {
+                                const tNode = nodes.find(n => n.id === tId);
+                                const tName = (tNode?.data as any)?.name || tId;
+                                return (
+                                  <div key={tId} className="flex items-center gap-1 text-[10px] text-violet-500">
+                                    <span>→</span>
+                                    <span className="truncate">{tName}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center px-6">
+              <div className="text-center">
+                <p className="text-sm text-gray-500">No sequence data</p>
+                <button onClick={runLifecycleSort} className="text-xs text-violet-600 hover:text-violet-700 font-medium mt-2">
+                  Run AI Sort →
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {/* Workflow Detail Panel */}
       {selectedWorkflow && (
         <WorkflowDetailPanel
