@@ -41,7 +41,10 @@ export default function WelcomePage() {
 
       if (data.portalName) setPortalName(data.portalName);
 
-      if (data.status === "COMPLETED") {
+      const isComplete = data.status === "COMPLETED" || 
+        (data.status === "SYNCING" && data.progress > 0 && data.total > 0 && data.progress >= data.total);
+      
+      if (isComplete) {
         setPhase("done");
         setShowConfetti(true);
 
@@ -70,11 +73,11 @@ export default function WelcomePage() {
   }, [portalId]);
 
   useEffect(() => {
-    if (!portalId) return;
-    pollSync(); // Initial check
+    if (!portalId || phase !== "syncing") return;
+    pollSync();
     const interval = setInterval(pollSync, 2000);
     return () => clearInterval(interval);
-  }, [portalId, pollSync]);
+  }, [portalId, pollSync, phase]);
 
   // Stop polling when done
   useEffect(() => {
