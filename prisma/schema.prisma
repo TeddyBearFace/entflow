@@ -408,6 +408,7 @@ model CustomEdge {
   color           String    @default("#6366f1")
   edgeType        String    @default("default") @map("edge_type")
   animated        Boolean   @default(false)
+  markerType      String    @default("arrow") @map("marker_type") // arrow, reverse, bidirectional, none
 
   createdAt       DateTime  @default(now()) @map("created_at")
 

@@ -32,6 +32,21 @@ import { usePlan } from "@/hooks/usePlan";
 import type { MapFilters, WorkflowNodeData } from "@/types";
 import type { StageGroup } from "@/lib/journey";
 
+function getEdgeMarkers(markerType: string, color: string) {
+  const arrow = { type: "arrowclosed" as any, color, width: 18, height: 18 };
+  switch (markerType) {
+    case "bidirectional":
+      return { markerStart: { ...arrow }, markerEnd: { ...arrow } };
+    case "reverse":
+      return { markerStart: { ...arrow } };
+    case "none":
+      return {};
+    case "arrow":
+    default:
+      return { markerEnd: { ...arrow } };
+  }
+}
+
 // Register custom node types
 const nodeTypes = {
   expandedWorkflow: ExpandedWorkflowNode,
@@ -272,7 +287,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         style: { stroke: ce.color || "#6366f1", strokeWidth: 2, strokeDasharray: ce.edgeType === "dashed" ? "8 4" : ce.edgeType === "dotted" ? "2 2" : undefined },
         label: ce.label || undefined,
         type: "smoothstep",
-        markerEnd: { type: "arrowclosed" as any, color: ce.color || "#6366f1", width: 18, height: 18 },
+        ...getEdgeMarkers(ce.markerType || "arrow", ce.color || "#6366f1"),
         animated: ce.animated || false,
         data: { customEdgeId: ce.id },
       }));
@@ -705,7 +720,8 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
           style: { stroke: edge.color, strokeWidth: 2 },
           label: edge.label || undefined,
           type: "smoothstep",
-          markerEnd: { type: "arrowclosed" as any, color: edge.color || canvasColor, width: 18, height: 18 },
+          ...getEdgeMarkers("arrow", edge.color || canvasColor),
+          data: { customEdgeId: edge.id, markerType: "arrow" },
           data: { customEdgeId: edge.id },
         }]);
       }
@@ -851,18 +867,26 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
   }, [selectedEdge, edges, setEdges]);
 
   // Change edge style (solid, dashed, dotted)
-  const changeEdgeStyle = useCallback(async (style: string) => {
+  const changeEdgeMarker = useCallback(async (markerType: string) => {
     if (!selectedEdge) return;
     const edge = edges.find(e => e.id === selectedEdge);
-    const dasharray = style === "dashed" ? "8 4" : style === "dotted" ? "2 2" : undefined;
+    const color = (edge?.style as any)?.stroke || "#6366f1";
+    const markers = getEdgeMarkers(markerType, color);
+
     if (edge?.data?.customEdgeId) {
       await fetch("/api/custom-edges", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ edgeId: edge.data.customEdgeId, edgeType: style }),
+        body: JSON.stringify({ edgeId: edge.data.customEdgeId, markerType }),
       });
     }
-    setEdges(eds => eds.map(e => e.id === selectedEdge ? { ...e, style: { ...e.style, strokeDasharray: dasharray } } : e));
+
+    setEdges(eds => eds.map(e => {
+      if (e.id !== selectedEdge) return e;
+      // Clear existing markers first, then apply new ones
+      const { markerStart: _, markerEnd: __, ...rest } = e as any;
+      return { ...rest, ...markers, data: { ...e.data, markerType } };
+    }));
   }, [selectedEdge, edges, setEdges]);
 
   // Toggle edge animation
@@ -1257,6 +1281,23 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
                 Dotted
               </button>
               <span className="w-px h-5 bg-gray-200" />
+              <span className="w-px h-5 bg-gray-200" />
+              {/* Arrow direction */}
+              {[
+                { type: "arrow", label: "→", title: "Forward" },
+                { type: "reverse", label: "←", title: "Reverse" },
+                { type: "bidirectional", label: "↔", title: "Both" },
+                { type: "none", label: "—", title: "No arrow" },
+              ].map(opt => {
+                const current = edge?.data?.markerType || "arrow";
+                return (
+                  <button key={opt.type} onClick={() => changeEdgeMarker(opt.type)}
+                    className={`px-2 py-1 rounded text-[10px] font-bold ${current === opt.type ? "bg-gray-200 text-gray-800" : "text-gray-500 hover:bg-gray-100"}`}
+                    title={opt.title}>
+                    {opt.label}
+                  </button>
+                );
+              })}
               {/* Animated toggle */}
               <button onClick={toggleEdgeAnimation}
                 className={`px-2 py-1 rounded text-[10px] font-medium ${edge.animated ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:bg-gray-100"}`}>
