@@ -99,29 +99,18 @@ export default function SyncBar({
     } catch {}
   }, [portalId]);
 
-  // Start polling when syncing
+  // Unified polling — always runs, adjusts speed based on phase
   useEffect(() => {
-    if (phase === "syncing") {
-      poll(); // immediate first poll
-      intervalRef.current = setInterval(poll, 1000);
-      return () => {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-      };
-    }
-  }, [phase, poll]);
+    let active = true;
 
-  // Background poll — detect syncs that start while page is open
-  useEffect(() => {
-    const bgPoll = async () => {
+    const tick = async () => {
+      if (!active) return;
       try {
         const res = await fetch(`/api/sync-status?portalId=${portalId}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        
-        if (data.status === "SYNCING" && phase !== "syncing") {
-          setSyncStatus(data);
-          setPhase("syncing");
-        }
+        if (!res.ok || !active) return;
+        const data: SyncStatus = await res.json();
+        setSyncStatus(data);
+
         if (data.lastSyncedAt) {
           setLastSynced(data.lastSyncedAt);
           if (isFree) {
@@ -129,27 +118,35 @@ export default function SyncBar({
             setCooldownMs(Math.max(0, FREE_COOLDOWN_MS - elapsed));
           }
         }
+
+        if (data.status === "SYNCING") {
+          setPhase(prev => {
+            if (prev !== "syncing") return "syncing";
+            return prev;
+          });
+        } else if (data.status === "COMPLETED" || data.status === "FAILED") {
+          setPhase(prev => {
+            if (prev === "syncing") return "done";
+            return prev;
+          });
+        }
       } catch {}
     };
 
-    bgPoll(); // immediate first check
-    const interval = setInterval(bgPoll, 5000);
-    return () => clearInterval(interval);
-  }, [portalId, isFree, phase]);
+    tick(); // immediate first check
+    const interval = setInterval(tick, phase === "syncing" ? 1500 : 5000);
+    return () => { active = false; clearInterval(interval); };
+  }, [portalId, phase, isFree]);
 
-  // Handle "done" phase
+  // Handle "done" phase — notify parent, then go idle
   useEffect(() => {
-    if (phase === "done") {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      updateCooldown();
-      doneTimeoutRef.current = setTimeout(() => {
-        setPhase("idle");
-        onSyncComplete?.();
-      }, 1500);
-      return () => {
-        if (doneTimeoutRef.current) clearTimeout(doneTimeoutRef.current);
-      };
-    }
+    if (phase !== "done") return;
+    updateCooldown();
+    const timeout = setTimeout(() => {
+      setPhase("idle");
+      onSyncComplete?.();
+    }, 1500);
+    return () => clearTimeout(timeout);
   }, [phase, onSyncComplete, updateCooldown]);
 
   // Cooldown ticker
