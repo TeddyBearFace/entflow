@@ -59,14 +59,22 @@ export default function WelcomePage() {
         setPhase("done");
         setShowConfetti(true);
 
-        // Fetch final stats
-        const statsRes = await fetch(`/api/graph?portalId=${portalId}`);
-        if (statsRes.ok) {
-          const statsData = await statsRes.json();
-          setWorkflowCount(statsData.stats?.totalWorkflows || statsData.nodes?.length || 0);
-          setDepCount(statsData.stats?.totalDependencies || statsData.edges?.length || 0);
-          setConflictCount(statsData.stats?.totalConflicts || 0);
-        }
+        // Fetch final stats directly
+        try {
+          const [wfRes, depRes, confRes] = await Promise.all([
+            fetch(`/api/graph?portalId=${portalId}`).then(r => r.ok ? r.json() : null),
+            fetch(`/api/sync-status?portalId=${portalId}`).then(r => r.ok ? r.json() : null),
+          ]);
+          if (wfRes) {
+            setWorkflowCount(wfRes.stats?.totalWorkflows || wfRes.nodes?.length || 0);
+            setDepCount(wfRes.stats?.totalDependencies || wfRes.edges?.length || 0);
+            setConflictCount(wfRes.stats?.totalConflicts || 0);
+          }
+          // Fallback: use sync total if graph returned 0
+          if (wfRes?.nodes?.length === 0 && depRes?.total > 0) {
+            setWorkflowCount(depRes.total);
+          }
+        } catch {}
 
         // Auto-advance steps
         setTimeout(() => setStep(1), 800);
@@ -98,7 +106,7 @@ export default function WelcomePage() {
         setTimeout(() => setStep(3), 2400);
         return;
       }
-      
+
     } catch {}
   }, [portalId]);
 
