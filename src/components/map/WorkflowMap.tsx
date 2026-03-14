@@ -578,52 +578,72 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
 
   const applyAutoLayout = useCallback(() => {
     if (!sequenceData?.sequence) return;
-
     const seq = sequenceData.sequence as Array<{ workflowId: string; position: number; stage: string }>;
+    const sorted = [...seq].sort((a, b) => a.position - b.position);
 
-    // Group by stage
     const stages = new Map<string, string[]>();
-    for (const item of seq) {
+    for (const item of sorted) {
       if (!stages.has(item.stage)) stages.set(item.stage, []);
       stages.get(item.stage)!.push(item.workflowId);
     }
 
-    // Layout: stages as columns, workflows stacked vertically
-    const COL_WIDTH = 360;
+    const COL_WIDTH = 380;
     const ROW_HEIGHT = 200;
     const START_X = 100;
     const START_Y = 100;
-
-    const newPositions: Array<{ nodeId: string; positionX: number; positionY: number }> = [];
+    const targets = new Map<string, { x: number; y: number }>();
     let colIndex = 0;
-
     for (const [, workflowIds] of stages) {
       workflowIds.forEach((wfId, rowIndex) => {
-        const x = START_X + colIndex * COL_WIDTH;
-        const y = START_Y + rowIndex * ROW_HEIGHT;
-        newPositions.push({ nodeId: wfId, positionX: x, positionY: y });
+        targets.set(wfId, {
+          x: START_X + colIndex * COL_WIDTH,
+          y: START_Y + rowIndex * ROW_HEIGHT,
+        });
       });
       colIndex++;
     }
 
-    // Update node positions on canvas
     setNodes(nds => nds.map(n => {
-      const pos = newPositions.find(p => p.nodeId === n.id);
-      if (pos) return { ...n, position: { x: pos.positionX, y: pos.positionY } };
-      return n;
+      if (n.type !== "expandedWorkflow") return n;
+      return { ...n, style: { ...n.style, transition: "transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)" } };
     }));
 
-    // Save positions to DB
-    fetch("/api/positions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ portalId, positions: newPositions }),
-    }).catch(() => {});
+    const order = sorted.map(s => s.workflowId);
+    const totalNodes = order.length;
 
-    // Fit view after layout
+    order.forEach((wfId, idx) => {
+      const progress = idx / Math.max(totalNodes - 1, 1);
+      const cumulativeDelay = Array.from({ length: idx }, (_, i) => {
+        const p = i / Math.max(totalNodes - 1, 1);
+        return Math.round(250 * (1 - p * 0.88));
+      }).reduce((sum, d) => sum + d, 0);
+
+      setTimeout(() => {
+        const target = targets.get(wfId);
+        if (!target) return;
+        setNodes(nds => nds.map(n => {
+          if (n.id !== wfId) return n;
+          return { ...n, position: { x: target.x, y: target.y }, style: { ...n.style, transition: `transform ${0.5 + progress * 0.3}s cubic-bezier(0.34, 1.56, 0.64, 1)` } };
+        }));
+      }, cumulativeDelay);
+    });
+
+    const totalDuration = Array.from({ length: totalNodes }, (_, i) => {
+      const p = i / Math.max(totalNodes - 1, 1);
+      return Math.round(250 * (1 - p * 0.88));
+    }).reduce((sum, d) => sum + d, 0) + 800;
+
     setTimeout(() => {
-      reactFlowInstance.fitView({ padding: 0.3, duration: 500 });
-    }, 100);
+      setNodes(nds => nds.map(n => {
+        if (n.type !== "expandedWorkflow") return n;
+        const { transition, ...restStyle } = (n.style || {}) as any;
+        return { ...n, style: restStyle };
+      }));
+
+      const positions = [...targets.entries()].map(([nodeId, pos]) => ({ nodeId, positionX: pos.x, positionY: pos.y }));
+      fetch("/api/positions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ portalId, positions }) }).catch(() => {});
+      reactFlowInstance.fitView({ padding: 0.3, duration: 800 });
+    }, totalDuration);
   }, [sequenceData, setNodes, portalId, reactFlowInstance]);
 
   const matchTypeIcons: Record<string, string> = { workflow_name: "📋", action: "⚡", property: "✏️", email: "📧", list: "📝", enrollment: "📥" };
@@ -1375,9 +1395,10 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
             <div className="flex items-center gap-1.5">
               {sequenceData && !sequenceLoading && (
                 <button onClick={applyAutoLayout}
-                  className="px-2.5 py-1 text-[10px] font-semibold text-white rounded-md hover:shadow-md transition-all"
+                  className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg hover:shadow-md transition-all flex items-center gap-1.5"
                   style={{ background: "linear-gradient(135deg, #7C3AED, #DB2777)" }}>
-                  Auto-layout
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7"/></svg>
+                  Arrange nodes
                 </button>
               )}
               <button onClick={() => setSequencePanel(false)} className="p-1 rounded hover:bg-gray-100 text-gray-400">
