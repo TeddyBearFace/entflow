@@ -64,7 +64,11 @@ export default function SettingsPage() {
     if (!confirm("Disconnect this HubSpot portal? All synced data, canvas elements, tags, and changelog entries will be permanently deleted.")) return;
     setActionLoading("disconnect");
     try {
-      const res = await fetch(`/api/portals?portalId=${portalId}`, { method: "DELETE" });
+      const res = await fetch("/api/portals/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ portalId }),
+      });
       if (res.ok) router.push("/connect");
     } catch {}
     finally { setActionLoading(null); }

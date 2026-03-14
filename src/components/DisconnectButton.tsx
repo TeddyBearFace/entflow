@@ -11,7 +11,11 @@ export default function DisconnectButton({ portalId, portalName }: { portalId: s
   const disconnect = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/portals?portalId=${portalId}`, { method: "DELETE" });
+      const res = await fetch("/api/portals/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ portalId }),
+      });
       if (res.ok) {
         router.refresh();
       }
