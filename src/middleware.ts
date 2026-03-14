@@ -16,6 +16,8 @@ const PUBLIC_ROUTES = [
   "/api/debug",
   "/admin",
   "/api/admin",
+  "/api/sync",
+  "/api/sync-status",
   "/welcome",
 ];
 
