@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+
 
 type Phase = "syncing" | "done" | "error";
 
@@ -109,12 +110,22 @@ export default function WelcomePage() {
     } catch {}
   }, [portalId]);
 
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+
   useEffect(() => {
-    if (!portalId || phase !== "syncing") return;
-    pollSync();
-    const interval = setInterval(pollSync, 2000);
-    return () => clearInterval(interval);
-  }, [portalId, pollSync, phase]);
+    if (!portalId) return;
+    let active = true;
+
+    const tick = async () => {
+      if (!active || phaseRef.current !== "syncing") return;
+      await pollSync();
+    };
+
+    tick();
+    const interval = setInterval(tick, 2000);
+    return () => { active = false; clearInterval(interval); };
+  }, [portalId, pollSync]);
 
   // Stop polling when done
   useEffect(() => {
