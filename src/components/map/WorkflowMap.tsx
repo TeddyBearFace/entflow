@@ -117,6 +117,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
   const [sequenceData, setSequenceData] = useState<any>(null);
   const [sequenceLoading, setSequenceLoading] = useState(false);
   const [sequencePanel, setSequencePanel] = useState(false);
+  const [sequenceError, setSequenceError] = useState<string | null>(null);
   const [filters, setFilters] = useState<MapFilters>({
     status: [],
     objectTypes: [],
@@ -517,38 +518,34 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
     const res = await fetch("/api/auto-sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ portalId, action: "toggle" }) });
     if (res.ok) { const data = await res.json(); setAutoSync(prev => ({ ...prev, enabled: data.autoSyncEnabled })); }
   };
+
   const runLifecycleSort = useCallback(async () => {
     setMenuOpen(false);
     setSequenceLoading(true);
     setSequencePanel(true);
+    setSequenceError(null);
+    setSequenceData(null);
     try {
-      // Gather workflow data for the AI
-      const workflowNodes = nodes.filter(n => n.type === "expandedWorkflow");
-      const workflows = workflowNodes.map(n => ({
-        id: n.id,
-        name: (n.data as any)?.name || "Unknown",
-        objectType: (n.data as any)?.objectType || "contact",
-        enrollmentCriteria: (n.data as any)?.enrollmentCriteria,
-        definition: {
-          steps: (n.data as any)?.actions || [],
-          enrollmentCriteria: (n.data as any)?.enrollmentCriteria,
-        },
+      // Always fetch full workflow data from API — nodes don't have enrollment/action data
+      const wfRes = await fetch(`/api/analyst/workflows?portalId=${portalId}`);
+      if (!wfRes.ok) {
+        setSequenceError("Failed to load workflow data");
+        setSequenceLoading(false);
+        return;
+      }
+      const wfData = await wfRes.json();
+      const workflowPayload = (wfData.workflows || []).map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        objectType: w.objectType,
+        enrollmentCriteria: w.enrollmentCriteria,
+        definition: w.definition,
       }));
 
-      // If we don't have enough data from nodes, fetch from API
-      let workflowPayload = workflows;
-      if (workflows.length === 0 || !workflows[0].enrollmentCriteria) {
-        const res = await fetch(`/api/analyst/workflows?portalId=${portalId}`);
-        if (res.ok) {
-          const data = await res.json();
-          workflowPayload = (data.workflows || []).map((w: any) => ({
-            id: w.id,
-            name: w.name,
-            objectType: w.objectType,
-            enrollmentCriteria: w.enrollmentCriteria,
-            definition: w.definition,
-          }));
-        }
+      if (workflowPayload.length === 0) {
+        setSequenceError("No workflows found. Sync your portal first.");
+        setSequenceLoading(false);
+        return;
       }
 
       const res = await fetch("/api/analyst/sequence", {
@@ -558,20 +555,26 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        console.error("[sequence] Error:", err);
+        const err = await res.json().catch(() => ({}));
+        setSequenceError(err.error || `AI service error (${res.status})`);
         setSequenceLoading(false);
         return;
       }
 
       const data = await res.json();
+      if (!data.sequence?.sequence || data.sequence.sequence.length === 0) {
+        setSequenceError("AI returned empty results. Try again.");
+        setSequenceLoading(false);
+        return;
+      }
       setSequenceData(data.sequence);
     } catch (err) {
       console.error("[sequence] Failed:", err);
+      setSequenceError("Network error. Check your connection and try again.");
     } finally {
       setSequenceLoading(false);
     }
-  }, [nodes, portalId]);
+  }, [portalId]);
 
   const applyAutoLayout = useCallback(() => {
     if (!sequenceData?.sequence) return;
@@ -1487,11 +1490,30 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center px-6">
-              <div className="text-center">
-                <p className="text-sm text-gray-500">No sequence data</p>
-                <button onClick={runLifecycleSort} className="text-xs text-violet-600 hover:text-violet-700 font-medium mt-2">
-                  Run AI Sort →
-                </button>
+              <div className="text-center max-w-[220px]">
+                {sequenceError ? (
+                  <>
+                    <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                    </div>
+                    <p className="text-xs font-medium text-gray-900 mb-1">Couldn't map flow</p>
+                    <p className="text-xs text-gray-500 mb-3">{sequenceError}</p>
+                    <button onClick={runLifecycleSort} className="text-xs text-violet-600 hover:text-violet-700 font-semibold">
+                      Try again →
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-10 h-10 rounded-full bg-violet-50 flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                    </div>
+                    <p className="text-xs font-medium text-gray-900 mb-1">Flow Timeline</p>
+                    <p className="text-xs text-gray-500 mb-3">Map the execution order of your automations</p>
+                    <button onClick={runLifecycleSort} className="text-xs text-violet-600 hover:text-violet-700 font-semibold">
+                      Start mapping →
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           )}
