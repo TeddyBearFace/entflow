@@ -146,12 +146,36 @@ export async function POST(request: NextRequest) {
     } catch {
       // Table might not exist yet
     }
+    // --- Disconnects ---
+    let disconnectTotal = 0;
+    let disconnectThisWeek = 0;
+    let disconnectsBySource: any[] = [];
+    try {
+      [disconnectTotal, disconnectThisWeek] = await Promise.all([
+        prisma.analyticsEvent.count({ where: { event: "portal_disconnect" } }),
+        prisma.analyticsEvent.count({ where: { event: "portal_disconnect", createdAt: { gte: weekAgo } } }),
+      ]);
+      const disconnectEvents = await prisma.analyticsEvent.findMany({
+        where: { event: "portal_disconnect" },
+        select: { metadata: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      });
+      disconnectsBySource = disconnectEvents.map((e: any) => ({
+        source: e.metadata?.source || "unknown",
+        portalName: e.metadata?.portalName || "—",
+        planTier: e.metadata?.planTier || "—",
+        workflowCount: e.metadata?.workflowCount || 0,
+        date: e.createdAt,
+      }));
+    } catch {}
 
     // --- Revenue (from Stripe data on portals) ---
     const paidPortals = await prisma.portal.findMany({
       where: { stripeSubscriptionId: { not: null } },
       select: { planTier: true, stripeCurrentPeriodEnd: true },
     });
+    
 
     const tierPrices: Record<string, number> = {
       STARTER: 9,
@@ -225,6 +249,11 @@ export async function POST(request: NextRequest) {
         mrr,
         activeSubs,
         paidPortals: paidPortals.length,
+      },
+      disconnects: {
+        total: disconnectTotal,
+        thisWeek: disconnectThisWeek,
+        recent: disconnectsBySource,
       },
     });
   } catch (err) {

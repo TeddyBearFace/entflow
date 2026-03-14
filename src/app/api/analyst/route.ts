@@ -1,4 +1,5 @@
 // app/api/analyst/route.ts
+import { trackEvent } from "@/lib/analytics";
 import { NextRequest, NextResponse } from "next/server";
 import {
   ANALYST_SYSTEM_PROMPT,
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = "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";
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     console.log("[analyst] key starts with:", apiKey?.slice(0, 15));
     if (!apiKey) {
       return NextResponse.json(
@@ -97,6 +98,8 @@ console.log("[analyst] key ends with:", JSON.stringify(apiKey?.slice(-5)));
         { status: 502 }
       );
     }
+
+    trackEvent("ai_analysis", { portalId: body.portalId });
 
     return NextResponse.json({ analysis });
   } catch (err: unknown) {
