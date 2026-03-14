@@ -423,19 +423,19 @@ function ActionStep({ action, isExpanded, onToggle }: { action: ParsedAction; is
           <div className="mt-1.5 ml-1 rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
             {mainSections.map(([sectionName, items]) => (
               <div key={sectionName} className="border-b border-gray-100 last:border-0">
-                <div className="px-3 py-1.5 bg-gray-50"><span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{sectionName}</span></div>
+                <div className="px-3 py-1.5 bg-gray-50"><span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{sectionName}</span></div>
                 <div className="px-3 py-2 space-y-1.5">{items.map((d, i) => (<div key={i} className="flex items-start gap-2 text-[11px]"><span className="text-gray-400 font-medium min-w-[90px] flex-shrink-0">{d.label}</span><ValueDisplay value={d.value} /></div>))}</div>
               </div>
             ))}
             {otherSection && otherSection.length > 0 && (
               <div className="border-b border-gray-100 last:border-0">
-                <div className="px-3 py-1.5 bg-gray-50"><span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Other</span></div>
+                <div className="px-3 py-1.5 bg-gray-50"><span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Other</span></div>
                 <div className="px-3 py-2 space-y-1.5">{otherSection.map((d,i) => (<div key={i} className="flex items-start gap-2 text-[11px]"><span className="text-gray-400 font-medium min-w-[90px] flex-shrink-0">{d.label}</span><ValueDisplay value={d.value} /></div>))}</div>
               </div>
             )}
             {techSection && techSection.length > 0 && (
               <details className="group">
-                <summary className="px-3 py-1.5 bg-gray-50 cursor-pointer text-[10px] font-bold text-gray-400 uppercase tracking-wider hover:text-gray-500 flex items-center gap-1">
+                <summary className="px-3 py-1.5 bg-gray-50 cursor-pointer text-xs font-medium text-gray-500 uppercase tracking-wider hover:text-gray-700 flex items-center gap-1">
                   <svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
                   Technical
                 </summary>
@@ -599,7 +599,7 @@ export default function WorkflowDetailPanel({ portalId, workflowId, onClose }: W
 
         {/* Tags */}
         <div className="px-4 py-2.5 border-b border-gray-100">
-          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Tags</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Tags</p>
           <div className="flex flex-wrap gap-1.5">
             {allTags.map(tag => {
               const isAssigned = assignedTagIds.has(tag.id);

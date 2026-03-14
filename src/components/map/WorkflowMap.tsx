@@ -1118,7 +1118,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
           <Panel position="top-left">
             <div className="flex flex-col gap-2">
               {stages.length > 0 && (
-                <div className="flex gap-3 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-3 py-2">
+                <div className="flex gap-3 bg-white rounded-md border border-gray-200 px-3 py-2">
                   {stages.map((stage) => (
                     <div key={stage.id} className="flex items-center gap-1.5">
                       <span
@@ -1139,19 +1139,19 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
           <Panel position="top-right">
             <div className="flex items-center gap-1.5">
               {/* Search - always visible */}
-              <button onClick={() => setSearchOpen(true)} className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors flex items-center gap-1.5">
+              <button onClick={() => setSearchOpen(true)} className="bg-white rounded-md border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <span className="hidden sm:inline">Search</span>
               </button>
               {/* Stats - always visible */}
-              <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-2.5 py-1.5 text-[10px] text-gray-500 tabular-nums">
+              <div className="bg-white rounded-md border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 tabular-nums">
                 {nodes.filter((n) => n.type === "expandedWorkflow").length}W · {edges.length}D
               </div>
               {/* Hamburger menu */}
               <div className="relative">
                 <button
                   onClick={() => setMenuOpen(p => !p)}
-                  className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-2 py-1.5 text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors"
+                  className="bg-white rounded-md border border-gray-200 px-2 py-1.5 text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </button>
@@ -1195,7 +1195,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
 
           {/* Edge legend */}
           <Panel position="bottom-right" style={{ bottom: 160 }}>
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 px-3 py-2">
+            <div className="bg-white rounded-md border border-gray-200 px-3 py-2">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
                 Connections
               </p>
