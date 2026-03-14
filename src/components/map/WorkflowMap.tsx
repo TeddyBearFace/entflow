@@ -588,7 +588,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
     }
 
     const COL_WIDTH = 380;
-    const ROW_HEIGHT = 200;
+    const ROW_HEIGHT = 320;
     const START_X = 100;
     const START_Y = 100;
     const targets = new Map<string, { x: number; y: number }>();
@@ -615,7 +615,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
       const progress = idx / Math.max(totalNodes - 1, 1);
       const cumulativeDelay = Array.from({ length: idx }, (_, i) => {
         const p = i / Math.max(totalNodes - 1, 1);
-        return Math.round(250 * (1 - p * 0.88));
+        return Math.round(500 * (1 - p * 0.75));
       }).reduce((sum, d) => sum + d, 0);
 
       setTimeout(() => {
@@ -623,7 +623,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         if (!target) return;
         setNodes(nds => nds.map(n => {
           if (n.id !== wfId) return n;
-          return { ...n, position: { x: target.x, y: target.y }, style: { ...n.style, transition: `transform ${0.5 + progress * 0.3}s cubic-bezier(0.34, 1.56, 0.64, 1)` } };
+          return { ...n, position: { x: target.x, y: target.y }, style: { ...n.style, transition: `transform ${0.8 + progress * 0.4}s cubic-bezier(0.34, 1.56, 0.64, 1)` } };
         }));
       }, cumulativeDelay);
     });
