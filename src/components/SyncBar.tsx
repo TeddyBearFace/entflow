@@ -99,7 +99,10 @@ export default function SyncBar({
     } catch {}
   }, [portalId]);
 
-  // Unified polling — always runs, adjusts speed based on phase
+  // Unified polling — always runs at 2s
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+
   useEffect(() => {
     let active = true;
 
@@ -119,24 +122,18 @@ export default function SyncBar({
           }
         }
 
-        if (data.status === "SYNCING") {
-          setPhase(prev => {
-            if (prev !== "syncing") return "syncing";
-            return prev;
-          });
-        } else if (data.status === "COMPLETED" || data.status === "FAILED") {
-          setPhase(prev => {
-            if (prev === "syncing") return "done";
-            return prev;
-          });
+        if (data.status === "SYNCING" && phaseRef.current !== "syncing") {
+          setPhase("syncing");
+        } else if ((data.status === "COMPLETED" || data.status === "FAILED") && phaseRef.current === "syncing") {
+          setPhase("done");
         }
       } catch {}
     };
 
-    tick(); // immediate first check
-    const interval = setInterval(tick, phase === "syncing" ? 1500 : 5000);
+    tick();
+    const interval = setInterval(tick, 2000);
     return () => { active = false; clearInterval(interval); };
-  }, [portalId, phase, isFree]);
+  }, [portalId, isFree]);
 
   // Handle "done" phase — notify parent, then go idle
   useEffect(() => {
