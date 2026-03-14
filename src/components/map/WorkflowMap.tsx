@@ -289,7 +289,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         type: "smoothstep",
         ...getEdgeMarkers(ce.markerType || "arrow", ce.color || "#6366f1"),
         animated: ce.animated || false,
-        data: { customEdgeId: ce.id },
+        data: { customEdgeId: ce.id, markerType: ce.markerType || "arrow" },
       }));
 
       setNodes([...workflowNodes, ...customNodes]);
@@ -863,7 +863,13 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         body: JSON.stringify({ edgeId: edge.data.customEdgeId, color }),
       });
     }
-    setEdges(eds => eds.map(e => e.id === selectedEdge ? { ...e, style: { ...e.style, stroke: color } } : e));
+    const markerType = edge?.data?.markerType || "arrow";
+    const markers = getEdgeMarkers(markerType, color);
+    setEdges(eds => eds.map(e => {
+      if (e.id !== selectedEdge) return e;
+      const { markerStart: _, markerEnd: __, ...rest } = e as any;
+      return { ...rest, style: { ...e.style, stroke: color }, ...markers };
+    }));
   }, [selectedEdge, edges, setEdges]);
 
   // Change edge style (solid, dashed, dotted)
