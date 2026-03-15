@@ -130,11 +130,15 @@ export default function WelcomePage() {
                 {total > 0 && progress > 0 ? `Syncing ${progress} of ${total} workflows` : message}
               </h1>
 
-              {percent > 0 && (
-                <div className="w-64 mx-auto h-1.5 bg-gray-200 rounded-full overflow-hidden mt-4">
-                  <div className="h-full bg-blue-600 rounded-full transition-all duration-700 ease-out" style={{ width: `${percent}%` }} />
+              <div className="w-72 mx-auto mt-5">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-gray-500">{total > 0 ? `${progress} of ${total}` : "Starting..."}</span>
+                  <span className="text-xs font-semibold text-gray-700 tabular-nums">{percent}%</span>
                 </div>
-              )}
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-600 rounded-full transition-all duration-700 ease-out" style={{ width: `${Math.max(percent, 2)}%` }} />
+                </div>
+              </div>
 
               {total > 0 && progress > 0 && (
                 <p className="text-xs text-gray-400 mt-3">{message}</p>

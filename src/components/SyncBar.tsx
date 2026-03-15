@@ -189,12 +189,10 @@ export default function SyncBar({
               ))}
             </div>
           )}
-          {percent > 0 && (
-            <span className="text-xs font-semibold text-gray-500 flex-shrink-0 tabular-nums">{percent}%</span>
-          )}
+          <span className="text-xs font-semibold text-gray-500 flex-shrink-0 tabular-nums">{percent}%</span>
         </div>
-        <div className="h-1 bg-gray-100 relative overflow-hidden">
-          <div className="h-full bg-blue-600 transition-all duration-700 ease-out" style={{ width: `${Math.max(percent, 3)}%` }} />
+        <div className="h-1.5 bg-gray-100 relative overflow-hidden">
+          <div className="h-full bg-blue-600 transition-all duration-700 ease-out rounded-full" style={{ width: `${Math.max(percent, 2)}%` }} />
         </div>
       </div>
     );
