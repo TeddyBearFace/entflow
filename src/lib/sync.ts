@@ -139,10 +139,11 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
 
     // --- Step 4.5: Fetch pipelines ---
     console.log(`[Sync ${portalId}] Fetching pipelines...`);
-    await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, "Fetching deal pipelines...");
-    const dealPipelines = await fetchPipelines(portalId, "DEAL");
-    await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, "Fetching ticket pipelines...");
-    const ticketPipelines = await fetchPipelines(portalId, "TICKET");
+    await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, "Fetching pipelines...");
+    const [dealPipelines, ticketPipelines] = await Promise.all([
+      fetchPipelines(portalId, "DEAL"),
+      fetchPipelines(portalId, "TICKET"),
+    ]);
     const allPipelines = [
       ...dealPipelines.map((p) => ({ ...p, objectType: "DEAL" })),
       ...ticketPipelines.map((p) => ({ ...p, objectType: "TICKET" })),
@@ -170,7 +171,7 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
     }
     const emailDetails: Array<{ id: string; name: string; subject: string }> = [];
     const emailArray = [...emailIds];
-    const EMAIL_BATCH = 5;
+    const EMAIL_BATCH = 10;
     for (let i = 0; i < emailArray.length; i += EMAIL_BATCH) {
       const batch = emailArray.slice(i, i + EMAIL_BATCH);
       await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, `Resolving emails (${Math.min(i + EMAIL_BATCH, emailArray.length)}/${emailArray.length})...`);
@@ -197,7 +198,7 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
     }
     const listDetails: Array<{ id: string; name: string }> = [];
     const listArray = [...listIds];
-    const LIST_BATCH = 5;
+    const LIST_BATCH = 10;
     for (let i = 0; i < listArray.length; i += LIST_BATCH) {
       const batch = listArray.slice(i, i + LIST_BATCH);
       await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, `Resolving lists (${Math.min(i + LIST_BATCH, listArray.length)}/${listArray.length})...`);

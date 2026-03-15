@@ -208,42 +208,78 @@ export default function SyncBar({
     );
   }
 
-  // ── Syncing ─────────────────────────────────────────────────
+  // ── Syncing ─────────────────────────────────────────────
   if (isSyncing) {
+    // Derive a visual step from the message
+    const steps = [
+      { match: "connect", label: "Connecting" },
+      { match: "discover", label: "Discovering" },
+      { match: "fetch", label: "Fetching" },
+      { match: "pars", label: "Parsing" },
+      { match: "conflict", label: "Conflicts" },
+      { match: "pipeline", label: "Pipelines" },
+      { match: "email", label: "Emails" },
+      { match: "list", label: "Lists" },
+      { match: "sav", label: "Saving" },
+      { match: "changelog", label: "Changelog" },
+    ];
+    const msgLower = message.toLowerCase();
+    const activeStep = steps.findIndex(s => msgLower.includes(s.match));
+
     return (
-      <div className={`bg-blue-50 border border-blue-200 rounded-xl overflow-hidden ${compact ? "" : ""}`}>
-        {/* Top row: message + stats */}
+      <div className={`bg-white border border-gray-200 rounded-xl overflow-hidden ${compact ? "" : ""}`}>
         <div className="flex items-center gap-3 px-4 py-2.5">
-          <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-300 border-t-blue-600 flex-shrink-0" />
+          {/* Pulsing dot */}
+          <div className="relative flex-shrink-0">
+            <div className="w-2 h-2 rounded-full bg-blue-600" />
+            <div className="absolute inset-0 w-2 h-2 rounded-full bg-blue-600 animate-ping opacity-40" />
+          </div>
+
+          {/* Message */}
           <div className="flex-1 min-w-0">
-            <p className={`font-medium text-blue-800 truncate ${compact ? "text-xs" : "text-sm"}`}>
+            <p className={`font-medium text-gray-900 truncate ${compact ? "text-xs" : "text-sm"}`}>
               {total > 0 && progress > 0
-                ? `Syncing workflows... ${progress} of ${total}`
+                ? `Syncing ${progress} of ${total} workflows`
                 : message}
             </p>
           </div>
-          {total > 0 && (
-            <span className="text-xs font-mono text-blue-600 flex-shrink-0 tabular-nums">
-              {progress}/{total}
-            </span>
+
+          {/* Step pills */}
+          {!compact && (
+            <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+              {steps.slice(0, 6).map((s, i) => (
+                <span key={s.label}
+                  className={`text-[9px] font-medium px-1.5 py-0.5 rounded transition-all duration-300 ${
+                    i < activeStep ? "bg-emerald-100 text-emerald-700" :
+                    i === activeStep ? "bg-blue-100 text-blue-700 animate-pulse" :
+                    "bg-gray-100 text-gray-400"
+                  }`}>
+                  {i < activeStep ? "✓" : s.label}
+                </span>
+              ))}
+            </div>
           )}
+
+          {/* Percentage */}
           {percent > 0 && (
-            <span className="text-xs font-bold text-blue-700 flex-shrink-0 tabular-nums">
+            <span className="text-xs font-semibold text-gray-500 flex-shrink-0 tabular-nums">
               {percent}%
             </span>
           )}
         </div>
-        {/* Progress bar — full width, fixed height, never changes container size */}
-        <div className="h-1.5 bg-blue-100">
+
+        {/* Progress bar with shimmer */}
+        <div className="h-1 bg-gray-100 relative overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500 ease-out"
-            style={{ width: `${Math.max(percent, 2)}%` }}
-          />
+            className="h-full bg-blue-600 transition-all duration-700 ease-out relative"
+            style={{ width: `${Math.max(percent, 3)}%` }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_1.5s_infinite]" />
+          </div>
         </div>
       </div>
     );
   }
-
   // ── Just completed ──────────────────────────────────────────
   if (isComplete) {
     return (
