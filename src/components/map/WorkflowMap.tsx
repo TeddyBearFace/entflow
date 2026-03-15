@@ -841,6 +841,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
 
   // Clipboard for copy/paste
   const clipboardRef = useRef<{ nodeType: string; data: any; width?: number; height?: number } | null>(null);
+  const copyIdRef = useRef(0);
 
   // Duplicate selected element (Ctrl+D)
   const duplicateSelectedElement = useCallback(async () => {
@@ -876,13 +877,15 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
     // Check for workflow node first (copy as PNG)
     const wfNode = nodes.find(n => n.selected && n.type === "expandedWorkflow");
     if (wfNode) {
+      const thisId = ++copyIdRef.current;
       const wrapper = document.querySelector(`[data-id="${wfNode.id}"]`) as HTMLElement;
-      const el = wrapper?.querySelector(".react-flow__node > div, [class*='rounded']") as HTMLElement || wrapper;
+      const el = wrapper?.firstElementChild as HTMLElement || wrapper;
       if (el) {
-        toPng(el, { pixelRatio: 2, backgroundColor: "white", style: { transform: "none", margin: "0", position: "static" } }).then(dataUrl => {
-          fetch(dataUrl).then(r => r.blob()).then(blob => {
-            navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]).catch(() => {});
-          });
+        toPng(el, { pixelRatio: 2, backgroundColor: "white", style: { transform: "none", position: "static" } }).then(async (dataUrl) => {
+          if (copyIdRef.current !== thisId) return; // Stale copy, skip
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
         }).catch(() => {});
       }
       return;
@@ -1525,13 +1528,15 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         {selectedWorkflow && (
           <div className="absolute top-16 right-4 z-40">
             <button onClick={() => {
+              const thisId = ++copyIdRef.current;
               const wrapper = document.querySelector(`[data-id="${selectedWorkflow}"]`) as HTMLElement;
               if (!wrapper) return;
               const el = wrapper.firstElementChild as HTMLElement || wrapper;
-              toPng(el, { pixelRatio: 2, backgroundColor: "white", style: { transform: "none", position: "static" } }).then(dataUrl => {
-                fetch(dataUrl).then(r => r.blob()).then(blob => {
-                  navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-                });
+              toPng(el, { pixelRatio: 2, backgroundColor: "white", style: { transform: "none", position: "static" } }).then(async (dataUrl) => {
+                if (copyIdRef.current !== thisId) return;
+                const res = await fetch(dataUrl);
+                const blob = await res.blob();
+                await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
               }).catch(() => {});
             }}
               className="bg-white border border-gray-200 rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:border-gray-300 transition-colors flex items-center gap-1.5 shadow-sm">
