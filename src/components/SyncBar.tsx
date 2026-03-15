@@ -127,10 +127,40 @@ export default function SyncBar({
   const isFailed = phase === "done" && syncStatus?.status === "FAILED" && !isDisconnected;
   const isComplete = phase === "done" && syncStatus?.status === "COMPLETED";
   const isSyncing = phase === "syncing";
-  const percent = syncStatus?.percent || 0;
   const progress = syncStatus?.progress || 0;
   const total = syncStatus?.total || 0;
   const message = syncStatus?.message || "Starting sync...";
+
+  // Calculate realistic percent across all sync phases
+  const calcPercent = () => {
+    const msg = message.toLowerCase();
+    if (msg.includes("starting") || msg.includes("verif")) return 2;
+    if (msg.includes("discover")) return 5;
+    if (msg.includes("found")) return 8;
+    if (msg.includes("fetching workflow") || msg.includes("fetch")) {
+      // Workflow fetch phase: 10-45%
+      if (total > 0 && progress > 0) return 10 + Math.round((progress / total) * 35);
+      return 10;
+    }
+    if (msg.includes("pars")) return 48;
+    if (msg.includes("conflict")) return 55;
+    if (msg.includes("pipeline")) return 60;
+    if (msg.includes("email")) {
+      const match = msg.match(/(\d+)\/(\d+)/);
+      if (match) return 65 + Math.round((parseInt(match[1]) / parseInt(match[2])) * 15);
+      return 65;
+    }
+    if (msg.includes("list")) {
+      const match = msg.match(/(\d+)\/(\d+)/);
+      if (match) return 80 + Math.round((parseInt(match[1]) / parseInt(match[2])) * 10);
+      return 80;
+    }
+    if (msg.includes("sav")) return 92;
+    if (msg.includes("changelog")) return 96;
+    if (msg.includes("complete")) return 100;
+    return 0;
+  };
+  const percent = calcPercent();
 
   // ── Disconnected ──
   if (isDisconnected) {
