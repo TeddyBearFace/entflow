@@ -1,138 +1,93 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-
 
 type Phase = "syncing" | "done" | "error";
 
-interface SyncStatus {
-  status: string;
-  message?: string;
-  progress?: number;
-  total?: number;
-  percent?: number;
-  lastSyncedAt?: string;
-  portalName?: string;
-}
-
 export default function WelcomePage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const portalId = searchParams.get("portal") || "";
 
   const [phase, setPhase] = useState<Phase>("syncing");
-  const [status, setStatus] = useState<SyncStatus | null>(null);
-  const [portalName, setPortalName] = useState<string>("");
+  const [message, setMessage] = useState("Connecting to HubSpot...");
+  const [progress, setProgress] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [percent, setPercent] = useState(0);
+  const [portalName, setPortalName] = useState("");
   const [workflowCount, setWorkflowCount] = useState(0);
   const [depCount, setDepCount] = useState(0);
   const [conflictCount, setConflictCount] = useState(0);
-  const [showConfetti, setShowConfetti] = useState(false);
   const [step, setStep] = useState(0);
-
-  // Poll sync status
-  const pollSync = useCallback(async () => {
-    if (!portalId) return;
-    try {
-      const res = await fetch(`/api/sync-status?portalId=${portalId}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setStatus(data);
-
-      if (data.portalName) setPortalName(data.portalName);
-
-      const isComplete = data.status === "COMPLETED";
-      
-      // If sync hasn't started yet (null/IDLE), keep waiting
-      // If status is unknown but lastSyncedAt exists, treat as complete
-      if (!isComplete && !data.status && data.lastSyncedAt) {
-        setPhase("done");
-        setShowConfetti(true);
-        setTimeout(() => setStep(1), 800);
-        setTimeout(() => setStep(2), 1600);
-        setTimeout(() => setStep(3), 2400);
-        return;
-      }
-
-      if (isComplete) {
-        setPhase("done");
-        setShowConfetti(true);
-
-        // Fetch final stats directly
-        try {
-          const [wfRes, depRes, confRes] = await Promise.all([
-            fetch(`/api/graph?portalId=${portalId}`).then(r => r.ok ? r.json() : null),
-            fetch(`/api/sync-status?portalId=${portalId}`).then(r => r.ok ? r.json() : null),
-          ]);
-          if (wfRes) {
-            setWorkflowCount(wfRes.stats?.totalWorkflows || wfRes.nodes?.length || 0);
-            setDepCount(wfRes.stats?.totalDependencies || wfRes.edges?.length || 0);
-            setConflictCount(wfRes.stats?.totalConflicts || 0);
-          }
-          // Fallback: use sync total if graph returned 0
-          if (wfRes?.nodes?.length === 0 && depRes?.total > 0) {
-            setWorkflowCount(depRes.total);
-          }
-        } catch {}
-
-        // Auto-advance steps
-        setTimeout(() => setStep(1), 800);
-        setTimeout(() => setStep(2), 1600);
-        setTimeout(() => setStep(3), 2400);
-
-        return; // Stop polling
-      }
-
-      if (data.status === "FAILED") {
-        setPhase("error");
-        return;
-      }
-
-      // Status is null or unexpected — if portal has been synced before, treat as done
-      if (!data.status || (data.status !== "SYNCING" && data.lastSyncedAt)) {
-        setPhase("done");
-        setShowConfetti(true);
-        const statsRes = await fetch(`/api/graph?portalId=${portalId}`);
-        if (statsRes.ok) {
-          const statsData = await statsRes.json();
-          setWorkflowCount(statsData.stats?.totalWorkflows || statsData.nodes?.length || 0);
-          setDepCount(statsData.stats?.totalDependencies || statsData.edges?.length || 0);
-          setConflictCount(statsData.stats?.totalConflicts || 0);
-        }
-        if (data.portalName) setPortalName(data.portalName);
-        setTimeout(() => setStep(1), 800);
-        setTimeout(() => setStep(2), 1600);
-        setTimeout(() => setStep(3), 2400);
-        return;
-      }
-
-    } catch {}
-  }, [portalId]);
 
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
+  const doneHandled = useRef(false);
 
+  // ── Single polling loop — runs until done ──
   useEffect(() => {
     if (!portalId) return;
     let active = true;
 
+    const handleDone = async () => {
+      if (doneHandled.current) return;
+      doneHandled.current = true;
+      setPhase("done");
+
+      // Fetch stats
+      try {
+        const res = await fetch(`/api/graph?portalId=${portalId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setWorkflowCount(data.stats?.totalWorkflows || data.nodes?.length || 0);
+          setDepCount(data.stats?.totalDependencies || data.edges?.length || 0);
+          setConflictCount(data.stats?.totalConflicts || 0);
+        }
+      } catch {}
+
+      // Animate steps
+      setTimeout(() => setStep(1), 600);
+      setTimeout(() => setStep(2), 1200);
+      setTimeout(() => setStep(3), 1800);
+    };
+
     const tick = async () => {
       if (!active || phaseRef.current !== "syncing") return;
-      await pollSync();
+
+      try {
+        const res = await fetch(`/api/sync-status?portalId=${portalId}`);
+        if (!res.ok || !active) return;
+        const data = await res.json();
+
+        if (data.portalName) setPortalName(data.portalName);
+        if (data.message) setMessage(data.message);
+        if (data.progress !== undefined) setProgress(data.progress);
+        if (data.total !== undefined) setTotal(data.total);
+        if (data.percent !== undefined) setPercent(data.percent);
+
+        if (data.status === "COMPLETED") {
+          await handleDone();
+          return;
+        }
+
+        if (data.status === "FAILED") {
+          setPhase("error");
+          return;
+        }
+
+        // Not syncing and not failed — maybe already completed before page loaded
+        if (data.status !== "SYNCING" && data.lastSyncedAt) {
+          await handleDone();
+          return;
+        }
+      } catch {}
     };
 
     tick();
     const interval = setInterval(tick, 2000);
     return () => { active = false; clearInterval(interval); };
-  }, [portalId, pollSync]);
-
-  // Stop polling when done
-  useEffect(() => {
-    if (phase === "done" || phase === "error") {
-      // Cleanup handled by return in the interval effect
-    }
-  }, [phase]);
+  }, [portalId]); // Only portalId — no callbacks, no phase, no restarts
 
   if (!portalId) {
     return (
@@ -147,7 +102,6 @@ export default function WelcomePage() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex flex-col">
-      {/* Minimal header */}
       <header className="h-12 border-b border-gray-200 bg-white flex items-center px-5">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center">
@@ -162,56 +116,42 @@ export default function WelcomePage() {
       <main className="flex-1 flex items-center justify-center px-4">
         <div className="max-w-md w-full">
 
-          {/* ── SYNCING ── */}
+          {/* SYNCING */}
           {phase === "syncing" && (
             <div className="text-center">
-              {/* Animated rings */}
-              <div className="relative w-20 h-20 mx-auto mb-6">
+              <div className="relative w-16 h-16 mx-auto mb-6">
                 <div className="absolute inset-0 rounded-full border-2 border-blue-200 animate-ping opacity-20" />
-                <div className="absolute inset-2 rounded-full border-2 border-blue-300 animate-ping opacity-30" style={{ animationDelay: "0.5s" }} />
                 <div className="absolute inset-0 rounded-full border-2 border-blue-100 flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600" />
+                  <div className="animate-spin rounded-full h-7 w-7 border-2 border-gray-300 border-t-blue-600" />
                 </div>
               </div>
 
               <h1 className="text-xl font-semibold text-gray-900 mb-2">
-                {status?.syncedWorkflows
-                  ? `Syncing workflows...`
-                  : "Connecting to HubSpot..."}
+                {total > 0 && progress > 0 ? `Syncing ${progress} of ${total} workflows` : message}
               </h1>
 
-              {status?.progress !== undefined && status?.total ? (
-                <>
-                  <p className="text-sm text-gray-500 mb-4">
-                    {status.progress} of {status.total} workflows
-                  </p>
-                  {/* Progress bar */}
-                  <div className="w-64 mx-auto h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-600 rounded-full transition-all duration-500 ease-out"
-                      style={{ width: `${status.percent || 0}%` }}
-                    />
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-gray-500">
-                  {status?.message || "Pulling your workflow data..."}
-                </p>
+              {percent > 0 && (
+                <div className="w-64 mx-auto h-1.5 bg-gray-200 rounded-full overflow-hidden mt-4">
+                  <div className="h-full bg-blue-600 rounded-full transition-all duration-700 ease-out" style={{ width: `${percent}%` }} />
+                </div>
+              )}
+
+              {total > 0 && progress > 0 && (
+                <p className="text-xs text-gray-400 mt-3">{message}</p>
               )}
 
               <p className="text-xs text-gray-400 mt-6">
-                This usually takes 10-30 seconds
+                {total > 100 ? "Large portal — this may take a couple of minutes" : "This usually takes 10-30 seconds"}
               </p>
             </div>
           )}
 
-          {/* ── DONE ── */}
+          {/* DONE */}
           {phase === "done" && (
             <div className="text-center">
-              {/* Success checkmark */}
               <div className="relative w-16 h-16 mx-auto mb-6">
-                <div className={`absolute inset-0 rounded-full bg-emerald-100 transition-transform duration-500 ${showConfetti ? "scale-100" : "scale-0"}`} />
-                <div className={`absolute inset-0 flex items-center justify-center transition-all duration-500 delay-200 ${showConfetti ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}>
+                <div className="absolute inset-0 rounded-full bg-emerald-100 animate-[scaleIn_0.4s_ease-out_both]" />
+                <div className="absolute inset-0 flex items-center justify-center animate-[fadeIn_0.3s_ease-out_0.2s_both]">
                   <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                   </svg>
@@ -222,17 +162,18 @@ export default function WelcomePage() {
                 {portalName ? `${portalName} is ready` : "Your portal is ready"}
               </h1>
               <p className="text-sm text-gray-500 mb-8">
-                We found {workflowCount} workflow{workflowCount !== 1 ? "s" : ""}, {depCount} dependenc{depCount !== 1 ? "ies" : "y"}{conflictCount > 0 ? `, and ${conflictCount} conflict${conflictCount !== 1 ? "s" : ""}` : ""}.
+                {workflowCount > 0
+                  ? `We found ${workflowCount} workflow${workflowCount !== 1 ? "s" : ""} and ${depCount} dependenc${depCount !== 1 ? "ies" : "y"}${conflictCount > 0 ? `, including ${conflictCount} conflict${conflictCount !== 1 ? "s" : ""}` : ""}.`
+                  : "Your portal has been connected successfully."}
               </p>
 
-              {/* Guided steps */}
-              <div className="text-left space-y-3 mb-8">
+              <div className="text-left space-y-2 mb-8">
                 {[
-                  { label: "Portal synced", detail: `${workflowCount} workflows mapped`, done: step >= 1 },
-                  { label: "Dependencies traced", detail: `${depCount} cross-workflow links found`, done: step >= 2 },
-                  { label: "Map ready", detail: "Visual workflow map is waiting for you", done: step >= 3 },
+                  { label: "Portal synced", detail: workflowCount > 0 ? `${workflowCount} workflows` : "Connected", done: step >= 1 },
+                  { label: "Dependencies traced", detail: `${depCount} links found`, done: step >= 2 },
+                  { label: "Map ready", detail: "Explore your workflows", done: step >= 3 },
                 ].map((s, i) => (
-                  <div key={i} className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all duration-300 ${s.done ? "bg-white border-gray-200" : "bg-gray-50 border-transparent opacity-40"}`}>
+                  <div key={i} className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all duration-300 ${s.done ? "bg-white border-gray-200" : "bg-gray-50 border-transparent opacity-30"}`}>
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${s.done ? "bg-emerald-100" : "bg-gray-200"}`}>
                       {s.done ? (
                         <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
@@ -250,8 +191,7 @@ export default function WelcomePage() {
                 ))}
               </div>
 
-              {/* CTA */}
-              <div className={`space-y-3 transition-all duration-500 ${step >= 3 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+              <div className={`space-y-3 transition-all duration-500 ${step >= 3 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}>
                 <Link href={`/map?portal=${portalId}`}
                   className="block w-full text-center px-6 py-3 rounded-lg font-medium text-white bg-gray-900 hover:bg-gray-800 transition-colors text-sm">
                   Open your workflow map →
@@ -264,7 +204,7 @@ export default function WelcomePage() {
             </div>
           )}
 
-          {/* ── ERROR ── */}
+          {/* ERROR */}
           {phase === "error" && (
             <div className="text-center">
               <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-6">
@@ -273,11 +213,14 @@ export default function WelcomePage() {
                 </svg>
               </div>
               <h1 className="text-xl font-semibold text-gray-900 mb-2">Sync failed</h1>
-              <p className="text-sm text-gray-500 mb-6">
-                {status?.message || "Something went wrong during the sync. This can happen with large portals — try again."}
-              </p>
+              <p className="text-sm text-gray-500 mb-6">{message || "Something went wrong. Try again."}</p>
               <div className="space-y-3">
-                <button onClick={() => { setPhase("syncing"); fetch(`/api/sync`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ portalId }) }).catch(() => {}); }}
+                <button onClick={() => {
+                  doneHandled.current = false;
+                  setPhase("syncing");
+                  setMessage("Retrying sync...");
+                  fetch("/api/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ portalId }) }).catch(() => {});
+                }}
                   className="block w-full text-center px-6 py-3 rounded-lg font-medium text-white bg-gray-900 hover:bg-gray-800 transition-colors text-sm">
                   Retry sync
                 </button>

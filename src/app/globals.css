@@ -71,3 +71,7 @@ main {
 .react-flow__node {
   animation: nodeIn 0.4s ease-out both;
 }
+@keyframes scaleIn {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
