@@ -169,14 +169,13 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
       }
     }
     const emailDetails: Array<{ id: string; name: string; subject: string }> = [];
-    let emailIdx = 0;
-    for (const emailId of emailIds) {
-      emailIdx++;
-      if (emailIdx % 5 === 0 || emailIdx === emailIds.size) {
-        await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, `Resolving emails (${emailIdx}/${emailIds.size})...`);
-      }
-      const detail = await fetchMarketingEmail(portalId, emailId);
-      if (detail) emailDetails.push(detail);
+    const emailArray = [...emailIds];
+    const EMAIL_BATCH = 5;
+    for (let i = 0; i < emailArray.length; i += EMAIL_BATCH) {
+      const batch = emailArray.slice(i, i + EMAIL_BATCH);
+      await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, `Resolving emails (${Math.min(i + EMAIL_BATCH, emailArray.length)}/${emailArray.length})...`);
+      const results = await Promise.all(batch.map(id => fetchMarketingEmail(portalId, id)));
+      for (const r of results) { if (r) emailDetails.push(r); }
     }
     console.log(`[Sync ${portalId}] Total emails resolved: ${emailDetails.length}`);
 
@@ -197,14 +196,13 @@ export async function syncPortal(portalId: string): Promise<SyncResult> {
       }
     }
     const listDetails: Array<{ id: string; name: string }> = [];
-    let listIdx = 0;
-    for (const listId of listIds) {
-      listIdx++;
-      if (listIdx % 5 === 0 || listIdx === listIds.size) {
-        await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, `Resolving lists (${listIdx}/${listIds.size})...`);
-      }
-      const detail = await fetchListDetails(portalId, listId);
-      if (detail) listDetails.push(detail);
+    const listArray = [...listIds];
+    const LIST_BATCH = 5;
+    for (let i = 0; i < listArray.length; i += LIST_BATCH) {
+      const batch = listArray.slice(i, i + LIST_BATCH);
+      await updateSyncProgress(portalId, flowDetails.length, flowDetails.length, `Resolving lists (${Math.min(i + LIST_BATCH, listArray.length)}/${listArray.length})...`);
+      const results = await Promise.all(batch.map(id => fetchListDetails(portalId, id)));
+      for (const r of results) { if (r) listDetails.push(r); }
     }
     console.log(`[Sync ${portalId}] Total lists resolved: ${listDetails.length}`);
 

@@ -268,7 +268,7 @@ export async function batchFetchWorkflowDetails(
 
     // Rate limit: wait between batches
     if (i + BATCH_SIZE < flowIds.length) {
-      await sleep(200);
+      await sleep(100);
     }
   }
 
