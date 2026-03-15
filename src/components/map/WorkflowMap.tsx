@@ -876,9 +876,10 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
     // Check for workflow node first (copy as PNG)
     const wfNode = nodes.find(n => n.selected && n.type === "expandedWorkflow");
     if (wfNode) {
-      const el = document.querySelector(`[data-id="${wfNode.id}"]`) as HTMLElement;
+      const wrapper = document.querySelector(`[data-id="${wfNode.id}"]`) as HTMLElement;
+      const el = wrapper?.querySelector(".react-flow__node > div, [class*='rounded']") as HTMLElement || wrapper;
       if (el) {
-        toPng(el, { pixelRatio: 2, backgroundColor: "white" }).then(dataUrl => {
+        toPng(el, { pixelRatio: 2, backgroundColor: "white", style: { transform: "none", margin: "0", position: "static" } }).then(dataUrl => {
           fetch(dataUrl).then(r => r.blob()).then(blob => {
             navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]).catch(() => {});
           });
@@ -1524,9 +1525,10 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
         {selectedWorkflow && (
           <div className="absolute top-16 right-4 z-40">
             <button onClick={() => {
-              const el = document.querySelector(`[data-id="${selectedWorkflow}"]`) as HTMLElement;
-              if (!el) return;
-              toPng(el, { pixelRatio: 2, backgroundColor: "white" }).then(dataUrl => {
+              const wrapper = document.querySelector(`[data-id="${selectedWorkflow}"]`) as HTMLElement;
+              if (!wrapper) return;
+              const el = wrapper.firstElementChild as HTMLElement || wrapper;
+              toPng(el, { pixelRatio: 2, backgroundColor: "white", style: { transform: "none", position: "static" } }).then(dataUrl => {
                 fetch(dataUrl).then(r => r.blob()).then(blob => {
                   navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
                 });
@@ -1540,7 +1542,7 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
             </button>
           </div>
         )}
-        
+
         {/* Selected edge action bar */}
         {selectedEdge && (() => {
           const edge = edges.find(e => e.id === selectedEdge);
