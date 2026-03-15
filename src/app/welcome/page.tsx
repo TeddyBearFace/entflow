@@ -171,7 +171,7 @@ export default function WelcomePage() {
               )}
 
               <p className="text-xs text-gray-400 mt-6">
-                {total > 100 ? "Large portal — this may take a couple of minutes" : "This usually takes 10-30 seconds"}
+                Grab a coffee — we're mapping everything for you
               </p>
             </div>
           )}
