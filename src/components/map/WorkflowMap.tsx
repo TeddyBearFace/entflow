@@ -311,7 +311,33 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
       });
 
       // Add staggered entrance delay to each node
-      setNodes([...workflowNodes, ...customNodes]);
+      // Staggered fade-in: set all nodes to opacity 0, then reveal one by one
+      const allNodes = [...workflowNodes, ...customNodes].map(n => ({
+        ...n,
+        style: { ...n.style, opacity: 0, transition: "opacity 0.4s ease-out" },
+      }));
+      setNodes(allNodes);
+
+      // Reveal nodes in staggered groups
+      const BATCH = 8;
+      const DELAY = 60;
+      for (let i = 0; i < allNodes.length; i += BATCH) {
+        const batchIds = new Set(allNodes.slice(i, i + BATCH).map(n => n.id));
+        setTimeout(() => {
+          setNodes(nds => nds.map(n => 
+            batchIds.has(n.id) ? { ...n, style: { ...n.style, opacity: 1 } } : n
+          ));
+        }, (i / BATCH) * DELAY);
+      }
+
+      // Clean up transition styles after all animations done
+      const totalTime = Math.ceil(allNodes.length / BATCH) * DELAY + 500;
+      setTimeout(() => {
+        setNodes(nds => nds.map(n => {
+          const { transition, opacity, ...restStyle } = (n.style || {}) as any;
+          return { ...n, style: { ...restStyle, opacity: 1 } };
+        }));
+      }, totalTime);
       setEdges([...(graphData.edges || []), ...customEdgeNodes]);
       setStages(graphData.stages || []);
       setStats(graphData.stats || null);
