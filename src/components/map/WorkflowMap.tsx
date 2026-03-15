@@ -15,6 +15,7 @@ import ReactFlow, {
   Panel,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import { toPng } from "html-to-image";
 import ExpandedWorkflowNode from "./ExpandedWorkflowNode";
 import CustomStageNode from "./CustomStageNode";
 import SectionNode from "./SectionNode";
@@ -32,6 +33,7 @@ import { usePlan } from "@/hooks/usePlan";
 import type { MapFilters, WorkflowNodeData } from "@/types";
 import type { StageGroup } from "@/lib/journey";
 import { IconChangelog, IconAnalyst, IconTimeline, IconSync, IconExport } from "@/components/icons";
+
 
 function getEdgeMarkers(markerType: string, color: string) {
   const arrow = { type: "arrowclosed" as any, color, width: 18, height: 18 };
@@ -869,41 +871,188 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
     } catch (err) { console.error("Duplicate failed:", err); }
   }, [nodes, portalId, setNodes, handleLabelChange, handleTextChange]);
 
-  // Copy (Ctrl+C)
+  // Copy (Ctrl+C) — copies to internal clipboard + system clipboard as Entflow JSON
   const copySelectedElement = useCallback(() => {
+    // Check for workflow node first (copy as PNG)
+    const wfNode = nodes.find(n => n.selected && n.type === "expandedWorkflow");
+    if (wfNode) {
+      const el = document.querySelector(`[data-id="${wfNode.id}"]`) as HTMLElement;
+      if (el) {
+        toPng(el, { pixelRatio: 2, backgroundColor: "white" }).then(dataUrl => {
+          fetch(dataUrl).then(r => r.blob()).then(blob => {
+            navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]).catch(() => {});
+          });
+        }).catch(() => {});
+      }
+      return;
+    }
+
+    // Canvas element — copy to internal + system clipboard
     const sel = nodes.find(n => n.selected && n.type !== "expandedWorkflow");
     if (!sel) return;
-    clipboardRef.current = { nodeType: sel.type!, data: { ...sel.data }, width: (sel.style as any)?.width || 200, height: (sel.style as any)?.height || 100 };
+    const payload = {
+      _entflow: true,
+      nodeType: sel.type!,
+      data: { ...sel.data },
+      width: (sel.style as any)?.width || 200,
+      height: (sel.style as any)?.height || 100,
+    };
+    clipboardRef.current = payload;
+    // Also write to system clipboard so it can be pasted cross-portal
+    navigator.clipboard.writeText(JSON.stringify(payload)).catch(() => {});
   }, [nodes]);
 
-  // Paste (Ctrl+V)
+  // Paste (Ctrl+V) — handles Entflow JSON, plain text, or internal clipboard
   const pasteElement = useCallback(async () => {
-    if (!clipboardRef.current) return;
-    const cb = clipboardRef.current;
     const { x, y, zoom } = reactFlowInstance.getViewport();
     const cx = (-x + window.innerWidth / 2) / zoom;
     const cy = (-y + window.innerHeight / 2) / zoom;
+
+    // Try reading system clipboard first
     try {
-      const res = await fetch("/api/custom-nodes", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          portalId, label: cb.data.label || "Pasted", nodeType: cb.nodeType,
-          color: cb.data.color || "#6366f1", icon: cb.data.icon, description: cb.data.description,
-          textContent: cb.data.textContent, fontSize: cb.data.fontSize,
-          fontWeight: cb.data.fontWeight, fontStyle: cb.data.fontStyle, textAlign: cb.data.textAlign,          zIndex: cb.nodeType === "section" ? -1 : 0, positionX: cx, positionY: cy,
-          width: cb.width, height: cb.height,
-        }),
-      });
-      if (res.ok) {
-        const n = await res.json();
-        setNodes(nds => nds.map(nd => ({ ...nd, selected: false })).concat({
-          id: n.id, type: cb.nodeType, position: { x: n.positionX, y: n.positionY }, selected: true,
-          style: { width: n.width || 200, height: n.height || 100, zIndex: n.zIndex || 0 },
-          data: { ...cb.data, nodeId: n.id, customNodeId: n.id, onLabelChange: handleLabelChange, onTextChange: handleTextChange },
-        }));
-        setSelectedCustomNode(n.id);
+      const text = await navigator.clipboard.readText();
+
+      // Check for Entflow JSON
+      if (text.includes('"_entflow":true') || text.includes('"_entflow": true')) {
+        const parsed = JSON.parse(text);
+        if (parsed._entflow) {
+          const res = await fetch("/api/custom-nodes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              portalId, label: parsed.data.label || "Pasted", nodeType: parsed.nodeType,
+              color: parsed.data.color || "#6366f1", icon: parsed.data.icon, description: parsed.data.description,
+              textContent: parsed.data.textContent, fontSize: parsed.data.fontSize,
+              fontWeight: parsed.data.fontWeight, fontStyle: parsed.data.fontStyle, textAlign: parsed.data.textAlign,
+              zIndex: parsed.nodeType === "section" ? -1 : 0, positionX: cx, positionY: cy,
+              width: parsed.width, height: parsed.height,
+            }),
+          });
+          if (res.ok) {
+            const n = await res.json();
+            setNodes(nds => nds.map(nd => ({ ...nd, selected: false })).concat({
+              id: n.id, type: parsed.nodeType, position: { x: n.positionX, y: n.positionY }, selected: true,
+              style: { width: n.width || 200, height: n.height || 100, zIndex: n.zIndex || 0 },
+              data: { ...parsed.data, nodeId: n.id, customNodeId: n.id, onLabelChange: handleLabelChange, onTextChange: handleTextChange },
+            }));
+            setSelectedCustomNode(n.id);
+          }
+          return;
+        }
       }
-    } catch (err) { console.error("Paste failed:", err); }
+
+      // Check for CSV (tab or comma separated, multiple lines)
+      if (text.includes("\t") || (text.includes(",") && text.includes("\n"))) {
+        const sep = text.includes("\t") ? "\t" : ",";
+        const rows = text.trim().split("\n").map(r => r.split(sep).map(c => c.trim()));
+        if (rows.length >= 2 && rows[0].length >= 2) {
+          // Create a section with sticky notes for each row
+          const header = rows[0];
+          const sectionRes = await fetch("/api/custom-nodes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              portalId, label: "Imported Data", nodeType: "section",
+              color: "#6366f1", positionX: cx - 20, positionY: cy - 20,
+              width: Math.max(400, header.length * 180 + 40), height: Math.max(300, rows.length * 80 + 60),
+              zIndex: -1,
+            }),
+          });
+          const sectionNode = sectionRes.ok ? await sectionRes.json() : null;
+
+          const newNodes: any[] = [];
+          if (sectionNode) {
+            newNodes.push({
+              id: sectionNode.id, type: "section",
+              position: { x: sectionNode.positionX, y: sectionNode.positionY },
+              style: { width: sectionNode.width, height: sectionNode.height, zIndex: -1 },
+              data: { label: "Imported Data", color: "#6366f1", shapeType: "section", nodeId: sectionNode.id, onLabelChange: handleLabelChange, onTextChange: handleTextChange },
+            });
+          }
+
+          for (let r = 1; r < Math.min(rows.length, 20); r++) {
+            const row = rows[r];
+            const label = row[0] || `Row ${r}`;
+            const detail = row.slice(1).join(" · ");
+            const stickyRes = await fetch("/api/custom-nodes", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                portalId, label, nodeType: "sticky",
+                textContent: detail, color: "#F59E0B",
+                positionX: cx + 10, positionY: cy + 10 + (r - 1) * 80,
+                width: 180, height: 60,
+              }),
+            });
+            if (stickyRes.ok) {
+              const sn = await stickyRes.json();
+              newNodes.push({
+                id: sn.id, type: "sticky",
+                position: { x: sn.positionX, y: sn.positionY },
+                style: { width: 180, height: 60 },
+                data: { label, textContent: detail, color: "#F59E0B", shapeType: "sticky", nodeId: sn.id, onLabelChange: handleLabelChange, onTextChange: handleTextChange },
+              });
+            }
+          }
+
+          if (newNodes.length > 0) {
+            setNodes(nds => [...nds, ...newNodes]);
+          }
+          return;
+        }
+      }
+
+      // Plain text — create a text node
+      if (text.trim().length > 0 && text.trim().length < 500) {
+        const res = await fetch("/api/custom-nodes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            portalId, label: text.trim().slice(0, 100), nodeType: "text",
+            textContent: text.trim(), color: "#111827",
+            positionX: cx, positionY: cy, width: 240, height: 60, fontSize: 14,
+          }),
+        });
+        if (res.ok) {
+          const n = await res.json();
+          setNodes(nds => nds.map(nd => ({ ...nd, selected: false })).concat({
+            id: n.id, type: "text", position: { x: n.positionX, y: n.positionY }, selected: true,
+            style: { width: 240, height: 60 },
+            data: { label: text.trim().slice(0, 100), textContent: text.trim(), color: "#111827", shapeType: "text", fontSize: 14, nodeId: n.id, onLabelChange: handleLabelChange, onTextChange: handleTextChange },
+          }));
+          setSelectedCustomNode(n.id);
+        }
+        return;
+      }
+    } catch {}
+
+    // Fallback: use internal clipboard
+    if (clipboardRef.current) {
+      const cb = clipboardRef.current;
+      try {
+        const res = await fetch("/api/custom-nodes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            portalId, label: cb.data?.label || "Pasted", nodeType: cb.nodeType,
+            color: cb.data?.color || "#6366f1", icon: cb.data?.icon, description: cb.data?.description,
+            textContent: cb.data?.textContent, fontSize: cb.data?.fontSize,
+            fontWeight: cb.data?.fontWeight, fontStyle: cb.data?.fontStyle, textAlign: cb.data?.textAlign,
+            zIndex: cb.nodeType === "section" ? -1 : 0, positionX: cx, positionY: cy,
+            width: cb.width, height: cb.height,
+          }),
+        });
+        if (res.ok) {
+          const n = await res.json();
+          setNodes(nds => nds.map(nd => ({ ...nd, selected: false })).concat({
+            id: n.id, type: cb.nodeType, position: { x: n.positionX, y: n.positionY }, selected: true,
+            style: { width: n.width || 200, height: n.height || 100, zIndex: n.zIndex || 0 },
+            data: { ...cb.data, nodeId: n.id, customNodeId: n.id, onLabelChange: handleLabelChange, onTextChange: handleTextChange },
+          }));
+          setSelectedCustomNode(n.id);
+        }
+      } catch {}
+    }
   }, [portalId, reactFlowInstance, setNodes, handleLabelChange, handleTextChange]);
 
   // Edge click handler
@@ -1371,6 +1520,27 @@ function WorkflowMapInner({ portalId, portalName }: WorkflowMapProps) {
           </div>
         )}
 
+{/* Copy workflow as image button */}
+        {selectedWorkflow && (
+          <div className="absolute top-16 right-4 z-40">
+            <button onClick={() => {
+              const el = document.querySelector(`[data-id="${selectedWorkflow}"]`) as HTMLElement;
+              if (!el) return;
+              toPng(el, { pixelRatio: 2, backgroundColor: "white" }).then(dataUrl => {
+                fetch(dataUrl).then(r => r.blob()).then(blob => {
+                  navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+                });
+              }).catch(() => {});
+            }}
+              className="bg-white border border-gray-200 rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:border-gray-300 transition-colors flex items-center gap-1.5 shadow-sm">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+              </svg>
+              Copy as image
+            </button>
+          </div>
+        )}
+        
         {/* Selected edge action bar */}
         {selectedEdge && (() => {
           const edge = edges.find(e => e.id === selectedEdge);
